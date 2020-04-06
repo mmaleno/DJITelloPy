@@ -6,6 +6,7 @@ import threading
 import cv2
 from threading import Thread
 from .decorators import accepts
+import sys
 
 
 class Tello:
@@ -66,6 +67,14 @@ class Tello:
     acceleration_z = -1.0
     attitude = {'pitch': -1, 'roll': -1, 'yaw': -1}
 
+    log_filename = "Tello_Log_" + str(time.localtime().tm_year) + "_" + \
+                                str(time.localtime().tm_mon) + "_" + \
+                                str(time.localtime().tm_mday) + "_" + \
+                                str(time.localtime().tm_hour) + "_" + \
+                                str(time.localtime().tm_min) + "_" + \
+                                str(time.localtime().tm_sec) + ".csv"
+    logfile = open(log_filename, "w")
+
     def __init__(self,
                  host='192.168.10.1',
                  port=8889,
@@ -79,6 +88,7 @@ class Tello:
         self.stream_on = False
         self.enable_exceptions = enable_exceptions
         self.retry_count = retry_count
+        self.logfile.close()
 
         if client_socket:
             self.clientSocket = client_socket
@@ -113,6 +123,7 @@ class Tello:
 
     def get_states(self):
         """This runs on background to recieve the state of Tello"""
+        self.logfile = open(log_filename, "a")
         while True:
             try:
                 self.response_state, _ = self.stateSocket.recvfrom(256)
@@ -140,6 +151,23 @@ class Tello:
                 self.LOGGER.error(e)
                 self.LOGGER.error("Response was is {}".format(self.response_state))
                 break
+            logfile.write(str(self.pitch) + "," + \
+                            str(self.roll) + "," + \
+                            str(self.yaw) + "," + \
+                            str(self.speed_x) + "," + \
+                            str(self.speed_y) + "," + \
+                            str(self.speed_z) + "," + \
+                            str(self.temperature_lowest) + "," + \
+                            str(self.temperature_highest) + "," + \
+                            str(self.distance_tof) + "," + \
+                            str(self.height) + "," + \
+                            str(self.battery) + "," + \
+                            str(self.barometer) + "," + \
+                            str(self.flight_time) + "," + \
+                            str(self.acceleration_x) + "," + \
+                            str(self.acceleration_y) + "," + \
+                            str(self.acceleration_z) + "," + "\n")
+            logfile.close()
 
     def get_udp_video_address(self):
         return 'udp://@' + self.VS_UDP_IP + ':' + str(self.VS_UDP_PORT)  # + '?overrun_nonfatal=1&fifo_size=5000'
