@@ -68,11 +68,11 @@ class Tello:
     attitude = {'pitch': -1, 'roll': -1, 'yaw': -1}
 
     log_filename = "Tello_Log_" + str(time.localtime().tm_year) + "_" + \
-                                str(time.localtime().tm_mon) + "_" + \
-                                str(time.localtime().tm_mday) + "_" + \
-                                str(time.localtime().tm_hour) + "_" + \
-                                str(time.localtime().tm_min) + "_" + \
-                                str(time.localtime().tm_sec) + ".csv"
+                                str(time.localtime().tm_mon).zfill(2) + "_" + \
+                                str(time.localtime().tm_mday).zfill(2) + "_" + \
+                                str(time.localtime().tm_hour).zfill(2) + "_" + \
+                                str(time.localtime().tm_min).zfill(2) + "_" + \
+                                str(time.localtime().tm_sec).zfill(2) + ".csv"
     logfile = open(log_filename, "w")
 
     def __init__(self,
@@ -179,8 +179,7 @@ class Tello:
                             str(self.acceleration_y) + "," + \
                             str(self.acceleration_z) + "\n")
             self.logfile.close()
-            time.sleep(0.001)
-
+            time.sleep(0.01)
 
     def get_udp_video_address(self):
         return 'udp://@' + self.VS_UDP_IP + ':' + str(self.VS_UDP_PORT)  # + '?overrun_nonfatal=1&fifo_size=5000'
@@ -818,6 +817,8 @@ class BackgroundFrameRead:
             self.cap.open(address)
 
         self.grabbed, self.frame = self.cap.read()
+        self.fourcc = cv2.VideoWriter_fourcc(*'MJPG') # *'MJPG' for .avi
+        self.vid_out = cv2.VideoWriter((tello.log_filename[:-4] + '.avi'),self.fourcc, 25.0, (960,720))
         self.stopped = False
 
     def start(self):
@@ -830,6 +831,7 @@ class BackgroundFrameRead:
                 self.stop()
             else:
                 (self.grabbed, self.frame) = self.cap.read()
+                self.vid_out.write(self.frame)
 
     def stop(self):
         self.stopped = True
