@@ -67,7 +67,7 @@ class Tello:
     acceleration_z = -1.0
     attitude = {'pitch': -1, 'roll': -1, 'yaw': -1}
 
-    log_filename = "Tello_Log_" + str(time.localtime().tm_year) + "_" + \
+    log_filename = "logs/Tello_Log_" + str(time.localtime().tm_year) + "_" + \
                                 str(time.localtime().tm_mon).zfill(2) + "_" + \
                                 str(time.localtime().tm_mday).zfill(2) + "_" + \
                                 str(time.localtime().tm_hour).zfill(2) + "_" + \
@@ -818,7 +818,7 @@ class BackgroundFrameRead:
 
         self.grabbed, self.frame = self.cap.read()
         self.fourcc = cv2.VideoWriter_fourcc(*'MJPG') # *'MJPG' for .avi
-        self.vid_out = cv2.VideoWriter((tello.log_filename[:-4] + '.avi'),self.fourcc, 25.0, (960,720))
+        self.vid_out = cv2.VideoWriter((tello.log_filename[:-4] + '.avi'),self.fourcc, 30, (960,720))
         self.stopped = False
 
     def start(self):

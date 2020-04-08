@@ -7,7 +7,7 @@ import time
 # Speed of the drone
 S = 60
 # Frames per second of the pygame window display
-FPS = 25
+FPS = 60
 
 
 class FrontEnd(object):
@@ -27,7 +27,8 @@ class FrontEnd(object):
 
         # Creat pygame window
         pygame.display.set_caption("Tello video stream")
-        self.screen = pygame.display.set_mode([960, 720])
+        # self.screen = pygame.display.set_mode([960, 720])
+        self.screen = pygame.display.set_mode([100, 100])
 
         # Init Tello object that interacts with the Tello drone
         self.tello = Tello()
@@ -86,14 +87,14 @@ class FrontEnd(object):
                 break
 
             self.screen.fill([0, 0, 0])
-            frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
-            frame = np.rot90(frame)
-            frame = np.flipud(frame)
-            frame = pygame.surfarray.make_surface(frame)
-            self.screen.blit(frame, (0, 0))
-            pygame.display.update()
+            #frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
+            #frame = np.rot90(frame)
+            #frame = np.flipud(frame)
+            #frame = pygame.surfarray.make_surface(frame)
+            #self.screen.blit(frame, (0, 0))
+            #pygame.display.update()
 
-            time.sleep(1 / FPS)
+            #time.sleep(1 / FPS)
 
         # Call it always before finishing. To deallocate resources.
         self.tello.end()
