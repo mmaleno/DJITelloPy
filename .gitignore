@@ -102,4 +102,10 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# datalogs
+*.csv
+*.avi
+*.mov
 .DS_Store
+

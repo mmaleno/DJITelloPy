@@ -67,12 +67,12 @@ class Tello:
     acceleration_z = -1.0
     attitude = {'pitch': -1, 'roll': -1, 'yaw': -1}
 
-    log_filename = "Tello_Log_" + str(time.localtime().tm_year) + "_" + \
-                                str(time.localtime().tm_mon) + "_" + \
-                                str(time.localtime().tm_mday) + "_" + \
-                                str(time.localtime().tm_hour) + "_" + \
-                                str(time.localtime().tm_min) + "_" + \
-                                str(time.localtime().tm_sec) + ".csv"
+    log_filename = "logs/Tello_Log_" + str(time.localtime().tm_year) + "_" + \
+                                str(time.localtime().tm_mon).zfill(2) + "_" + \
+                                str(time.localtime().tm_mday).zfill(2) + "_" + \
+                                str(time.localtime().tm_hour).zfill(2) + "_" + \
+                                str(time.localtime().tm_min).zfill(2) + "_" + \
+                                str(time.localtime().tm_sec).zfill(2) + ".csv"
     logfile = open(log_filename, "w")
 
     def __init__(self,
@@ -105,11 +105,16 @@ class Tello:
         thread1 = threading.Thread(target=self.run_udp_receiver, args=())
         # Run state reciever on background
         thread2 = threading.Thread(target=self.get_states, args=())
+        # Run data logger
+        thread3 = threading.Thread(target=self.log_data, args=())
+        #thread3 = threading.Timer(15, self.log_data())
 
         thread1.daemon = True
         thread2.daemon = True
+        #thread3.daemon = True
         thread1.start()
         thread2.start()
+        thread3.start()
 
     def run_udp_receiver(self):
         """Setup drone UDP receiver. This method listens for responses of Tello. Must be run from a background thread
@@ -123,7 +128,6 @@ class Tello:
 
     def get_states(self):
         """This runs on background to recieve the state of Tello"""
-        self.logfile = open(log_filename, "a")
         while True:
             try:
                 self.response_state, _ = self.stateSocket.recvfrom(256)
@@ -151,7 +155,14 @@ class Tello:
                 self.LOGGER.error(e)
                 self.LOGGER.error("Response was is {}".format(self.response_state))
                 break
-            logfile.write(str(self.pitch) + "," + \
+
+    def log_data(self):
+        start_time = time.time()
+        #time.sleep(10)
+        while (True):
+            self.logfile = open(self.log_filename, "a")
+            self.logfile.write(str(time.time() - start_time) + "," + \
+                            str(self.pitch) + "," + \
                             str(self.roll) + "," + \
                             str(self.yaw) + "," + \
                             str(self.speed_x) + "," + \
@@ -166,8 +177,9 @@ class Tello:
                             str(self.flight_time) + "," + \
                             str(self.acceleration_x) + "," + \
                             str(self.acceleration_y) + "," + \
-                            str(self.acceleration_z) + "," + "\n")
-            logfile.close()
+                            str(self.acceleration_z) + "\n")
+            self.logfile.close()
+            time.sleep(0.01)
 
     def get_udp_video_address(self):
         return 'udp://@' + self.VS_UDP_IP + ':' + str(self.VS_UDP_PORT)  # + '?overrun_nonfatal=1&fifo_size=5000'
@@ -805,6 +817,8 @@ class BackgroundFrameRead:
             self.cap.open(address)
 
         self.grabbed, self.frame = self.cap.read()
+        self.fourcc = cv2.VideoWriter_fourcc(*'MJPG') # *'MJPG' for .avi
+        self.vid_out = cv2.VideoWriter((tello.log_filename[:-4] + '.avi'),self.fourcc, 30, (960,720))
         self.stopped = False
 
     def start(self):
@@ -817,6 +831,7 @@ class BackgroundFrameRead:
                 self.stop()
             else:
                 (self.grabbed, self.frame) = self.cap.read()
+                self.vid_out.write(self.frame)
 
     def stop(self):
         self.stopped = True

@@ -1,95 +1,33 @@
-# DJITelloPy
-DJI Tello drone python interface using the official [Tello SDK](https://dl-cdn.ryzerobotics.com/downloads/tello/20180910/Tello%20SDK%20Documentation%20EN_1.3.pdf) and [Tello EDU SDK](https://dl-cdn.ryzerobotics.com/downloads/Tello/Tello%20SDK%202.0%20User%20Guide.pdf). Yes, this library has been tested with the drone. 
-Please see [example.py](https://github.com/damiafuentes/TelloSDKPy/blob/master/example.py) for a working example controlling the drone as a remote controller with the keyboard and the video stream in a window.  
+# DJITelloPy_E205
+Harvey Mudd College // Spring 2020 // E205 Systems Simulation // Final Project.  Developed by Max Maleno '20 and Kevin Shoyer '20.
 
-Tested with Python 3.6, but it also may be compatabile with other versions.
+Repository is originally forked from damiafuentes' DJITelloPy due to its robustness and strong foundations for communicating with the Tello using Python 3.  It's an awesome project!
 
-Feel free to contribute!
+Signicant Change log:
 
-## Install through git clone
-```
-$ pip install --upgrade pip
-$ git clone https://github.com/damiafuentes/TelloSDKPy.git
-$ cd TelloSDKPy
-$ pip install -r requirements.txt
-```
-Sometimes you need to update the virtual environment indexes and skeletons in order for the `example.py` file to work with `pygame`. If you are working with PyCharm, this can be done to ```File > Invalidate Caches```
+2020-04-07 -- datalogging (both Tello telemetry and videostream) is implemented.  CSV file and AVI video is generated for every session.
 
-## ~~Install through pip~~
-**DEPRECATED**: The python package at PyPi library is not maintained anymore. I would recommend to install it through ``git clone``.
-```
-$ pip install djitellopy
-```
+## Walkthrough/tutorial
+A nice writeup will be written in the near future...
 
-## Usage
+### Basic movement in keyboard_control.py
 
-### Simple example
-
-```python
-from TelloSDKPy.djitellopy import Tello
-import cv2
-import time
-
-tello = Tello()
-
-tello.connect()
-tello.takeoff()
-
-tello.move_left(100)
-tello.rotate_counter_clockwise(45)
-
-tello.land()
-tello.end()
-```
-
-### Example using pygame and the video stream
-Please see [example.py](https://github.com/damiafuentes/TelloSDKPy/blob/master/example.py). 
-
-The controls are:
+The keyboard controls for keyboard_control.py are:
 - T: Takeoff
 - L: Land
 - Arrow keys: Forward, backward, left and right.
 - A and D: Counter clockwise and clockwise rotations
 - W and S: Up and down.
 
-### Swarm example
-Only for Tello EDU's.
-```python
-from TelloSDKPy.djitellopy import TelloSwarm
-
-swarm = TelloSwarm.fromIps([
-    "192.168.178.42",
-    "192.168.178.43",
-    "192.168.178.44"
-])
-
-swarm.connect()
-swarm.takeoff()
-
-# run in parallel on all tellos
-swarm.move_up(100)
-
-# run by one tello after the other
-swarm.sequential(lambda i, tello: tello.move_forward(i * 20))
-
-# making each tello do something unique in parallel
-swarm.parallel(lambda i, tello: tello.move_left(i * 100))
-
-swarm.land()
-swarm.end()
-```
-
 ### Notes
-- If you are using the ```streamon``` command and the response is ```Unknown command``` means you have to update the Tello firmware. That can be done through the Tello app.
-- Mission pad detection and navigation is only supported by the Tello EDU.
-- Connecting to an existing wifi network is only supported by the Tello EDU.
-- When connected to an existing wifi network video streaming is not available.
+- to be replaced
 
-## Author
+## Resources
+- [E205 SP20 website](https://sites.google.com/g.hmc.edu/e205)
+- [Tello product website](https://www.ryzerobotics.com/tello)
+- [Tello SDK documentation](https://dl-cdn.ryzerobotics.com/downloads/tello/20180910/Tello%20SDK%20Documentation%20EN_1.3.pdf) 
 
-* **Damià Fuentes Escoté** 
+## Original Author
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/damiafuentes/TelloSDKPy/blob/master/LICENSE) file for details
+* **Damià Fuentes Escoté** [DJITelloPy](https://github.com/damiafuentes/DJITelloPy)
 
