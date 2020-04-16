@@ -7,6 +7,14 @@ Signicant Change log:
 
 2020-04-07 -- datalogging (both Tello telemetry and videostream) is implemented.  CSV file and AVI video is generated for every session.
 
+## Scripts and functionallity
+posit_proccess.m
+    functionallity: was used to experiment with the control outputs of the drone. 
+    dependencies: files in "callibration data logs" folder. You will need to fix the path to these files. Look in post_proccess to find description of test.
+CameraCallibrationMatlab
+    functionallity: This folder contains the matlab camera callibration toolkit files
+    dependencies: none
+
 ## Walkthrough/tutorial
 A nice writeup will be written in the near future...
 

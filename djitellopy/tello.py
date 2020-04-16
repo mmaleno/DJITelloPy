@@ -5,7 +5,7 @@ import time
 import threading
 import cv2
 from threading import Thread
-from .decorators import accepts
+from decorators import accepts
 import sys
 
 

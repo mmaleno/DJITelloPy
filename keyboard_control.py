@@ -27,7 +27,7 @@ class FrontEnd(object):
 
         # Creat pygame window
         pygame.display.set_caption("Tello video stream")
-        # self.screen = pygame.display.set_mode([960, 720])
+        #self.screen = pygame.display.set_mode([960, 720])
         self.screen = pygame.display.set_mode([100, 100])
 
         # Init Tello object that interacts with the Tello drone
@@ -86,13 +86,13 @@ class FrontEnd(object):
                 frame_read.stop()
                 break
 
-            self.screen.fill([0, 0, 0])
-            #frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
-            #frame = np.rot90(frame)
-            #frame = np.flipud(frame)
-            #frame = pygame.surfarray.make_surface(frame)
-            #self.screen.blit(frame, (0, 0))
-            #pygame.display.update()
+            # self.screen.fill([0, 0, 0])
+            # frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
+            # frame = np.rot90(frame)
+            # frame = np.flipud(frame)
+            # frame = pygame.surfarray.make_surface(frame)
+            # self.screen.blit(frame, (0, 0))
+            # pygame.display.update()
 
             #time.sleep(1 / FPS)
 
