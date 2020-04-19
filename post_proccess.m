@@ -2,9 +2,9 @@
 % 4/11/2020
 % This script is used for post processing from the Tello Drone Control data
 %% Experiment 1: just messing around with it
- filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_13_31_39.csv';
+ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_13_31_39.csv';
 %% Experiment 2: (somewhat botched)
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_15_04_08.csv';
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_15_04_08.csv';
 % Experiment 2: to test coordinate systems and get more intuition on velocity reading
 % 
 % Start on desk
@@ -15,7 +15,7 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11
 % With drone flat, walk forward at walking speed
 
 %% Experiment 3: testing accelerometer and roll/pitch/yaw coordinate system
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_15_19_18.csv';
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_15_19_18.csv';
 % sit for 10 seconds
 %pitch upwards and look at cieling
 % sit for 10
@@ -27,7 +27,7 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11
 %roll right 360 degrees
 %pitch up 360 degrees
 %yaw left 360 degrees
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_15_53_46.csv';
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_15_53_46.csv';
 
 %% experiement 5: looking at velocities
 
@@ -35,7 +35,7 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11
 % Hold and move right at walking speed
 % Tilt vehicle around and stay in one location
 % Tilt vehicle 45 degrees forward and walk forward at walking speed
-%filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_17_46_08.csv';
+%filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_17_46_08.csv';
 
 %% experiment 6: flying and velocities
 % 1) fly up
@@ -44,10 +44,15 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11
 % 4) take same path back, but face towards direction of travel at all times
 % (should be forward velocity, if velocity is local)
 % 5) land on ground (to see what this does for height)
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_11_18_15_22.csv';
+
+% this was about 9ft by 10ft path (2.7 meters by 3 meters)
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_11_18_15_22.csv';
 
 %% Experiment 7: moved around the room for a longer time to look at the drift while integrating velocity
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/logs/Tello_Log_2020_04_12_18_41_43.csv';
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_12_18_41_43.csv';
+
+%% Experiment 8: moving in a square 5 times
+
 
 %% Import data from text file.
 
@@ -146,15 +151,20 @@ y = 0;
 z = 0;
 for i = 1:length(delta_t)
     dt = delta_t(i)
-    x = x + v_x(i).*dt;
-    y = y + v_y(i).*dt;
-    z = y + v_z(i).*dt;
+    x = x + v_x(i).*dt/10;
+    y = y + v_y(i).*dt/10;
+    z = y + v_z(i).*dt/10;
     x_pos = [x_pos,x];
     y_pos = [y_pos,y];
     z_pos = [z_pos,z];
     
 end
+
+figure(5)
 plot(x_pos,y_pos)
+title('x,y path from velocity integration')
+xlabel('x position (m)')
+ylabel('y Position (m)')
 
 
 %% Resample because it takes forever with this many data points
