@@ -363,7 +363,7 @@ for i=1:length(roll)
     dcm_i = angle2dcm( yaw(i), pitch(i), roll(i));
     a_gi = dcm_i*thrust_vector_local;
     a_gi = a_gi./a_gi(3)*9.81; % normalize the vector by the z direction value and scale by gravity
-    a_gi(3) = a_gi(3)-9.81; %now subtract out gravity from z
+    a_gi(3) = a_gi(3)-9.81; %now subtract out gravity 
     a_g = [a_g,a_gi];
     
 end
