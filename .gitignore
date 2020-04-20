@@ -108,4 +108,4 @@ venv.bak/
 *.avi
 *.mov
 .DS_Store
-.icloud
+*.icloud
