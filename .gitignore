@@ -109,3 +109,4 @@ venv.bak/
 *.mov
 .DS_Store
 *.icloud
+*~
