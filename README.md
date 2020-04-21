@@ -27,6 +27,14 @@ The keyboard controls for keyboard_control.py are:
 - A and D: Counter clockwise and clockwise rotations
 - W and S: Up and down.
 
+### How to use atm:
+
+1.  Go into Apriltag/apriltag-master/python
+2.  run "python3 ../../../keyboard_control.py"
+3.  After performing trial, run following command: "python3 apriltag_vid_generator.py -c -k '(865.4575, 867.2598, 481.5149, 361.2172)' -s .133 poop"
+3.1 you need to say "poop" at end of line because it is expecting one more argument.  TODO change this in future
+3.2 those are camera params kevin gave me for Tello
+
 ### Notes
 - to be replaced
 
