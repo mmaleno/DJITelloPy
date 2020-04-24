@@ -536,12 +536,12 @@ vec_g3 = DCM3*vec
 tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct
 
 
-est_pos = zeros(3,length(timeCamA))
+est_pos = zeros(3,length(timeCamA));
 
 %rotate to global frame and translate to origin
 for i=1:length(timeCamA)
     if tagDetected(i) ==1
-        t = timeCamA(i)
+        t = timeCamA(i);
         z = [x_tag(i),y_tag(i),z_tag(i)]';
         %find the closest imu measurement
         [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
