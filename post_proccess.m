@@ -50,8 +50,16 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/CallibrationDataLo
 %% Experiment 7: moved around the room for a longer time to look at the drift while integrating velocity
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205/CallibrationDataLogs/Tello_Log_2020_04_12_18_41_43.csv';
 
-%% Experiment 8: moving in a square 5 times
+%% Experiment 8: Used to allign april tag time and imu time
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_16_40_30.csv';
 
+%% Experiment 9: testing the measurement model
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10.csv';
+
+% start at origin. move up to level with the tag. Move left about 2 meters.
+% Move back to x,y origin. move towards tag. Look around, but stay 1m from
+% tag
 
 %% Import data from text file.
 
@@ -94,6 +102,54 @@ a_y = dataArray{:, 16}.*(-1/1000*9.8);%m/s^2
 a_z = dataArray{:, 17}.*(-1/1000*9.8);%m/s^2
 
 %clearvars filename delimiter formatSpec fileID dataArray ans;
+
+%% import apriltag measurment data
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10_april.csv';
+delimiter = ',';
+formatSpec = '%f%f%f%f%f%f%[^\n\r]';
+fileID = fopen(filename,'r');
+dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'EmptyValue' ,NaN, 'ReturnOnError', false);
+fclose(fileID);
+% Allocate imported array to column variable names
+frameNum = dataArray{:, 1};
+timeCam = dataArray{:, 2};
+tagDetected = dataArray{:, 3};
+y_tag = dataArray{:, 4}; % in our local coordinate system
+z_tag = dataArray{:, 5};
+x_tag = dataArray{:, 6};
+clearvars filename delimiter formatSpec fileID dataArray ans;
+
+t_diff = 23.72-21.1;
+
+timeCamA = timeCam+t_diff;
+
+%% plot pitch and tagdetected to see how times line up
+
+figure(15)
+plot(timeCam,tagDetected)
+hold on
+plot(time, pitch)
+
+%from video, it appears that the camera looses site of the apriltag right
+%when the pitch motion begins
+
+t_lost_cam = 21.1; %camera time that apriltag is lost
+t_lost_imu = 23.72; %imu pitch begins at 23.65 to 23.72 seconds
+
+t_diff = 23.72-21.1;
+
+timeCamA = timeCam+t_diff
+
+% plot the newly alligned data
+
+figure(16)
+plot(timeCamA,tagDetected)
+hold on
+plot(time, pitch)
+
+% this looks correct, but we may want to create a better procedure with
+% many measurements to allign them more propperly
+
 
 %% Plot the accelerations
 
@@ -445,3 +501,85 @@ hold on
 plot(time(11:end),v_za)
 legend('x velocity','y velocity','z velocity')
 title('Velocities integrated from global accelerations')
+
+
+%% Testing different DCM from euler angles. None of them are good. Let's assume for now the built in matlab function is working propperly
+
+yaw = .8;
+pitch = .1;
+roll = -.01;
+
+%testing different DCMs:
+
+DCM2 = [cos(yaw)*cos(pitch)       cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll)      cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll);
+        sin(yaw)*cos(pitch)       sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll)      sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll);
+        -sin(pitch)                         cos(pitch)*sin(roll)                            cos(pitch)*cos(roll)];
+
+DCM3 = [cos(pitch)*cos(yaw)-sin(pitch)*sin(roll)*sin(yaw)      cos(pitch)*sin(yaw)+sin(pitch)*sin(roll)*cos(yaw)  -sin(pitch)*cos(roll);
+        -cos(roll)*sin(yaw)                          cos(roll)*cos(yaw)                       sin(roll);
+        sin(pitch)*cos(yaw)+cos(pitch)*sin(roll)*sin(yaw)      sin(pitch)*sin(yaw)-cos(pitch)*sin(roll)*cos(yaw)  cos(pitch)*cos(roll)]
+
+DCM1 = angle2dcm( yaw, pitch, roll);
+
+% DCMs can look different and represent the same transformation. Check by
+% rotating a vector:
+
+vec = [1;2;3];
+
+vec_g1 = DCM1*vec
+vec_g2 = DCM2*vec
+vec_g3 = DCM3*vec
+
+%% Measurement model (estimate global position from local tag measurement)
+
+
+tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct
+
+
+est_pos = zeros(3,length(timeCamA))
+
+%rotate to global frame and translate to origin
+for i=1:length(timeCamA)
+    if tagDetected(i) ==1
+        t = timeCamA(i)
+        z = [x_tag(i),y_tag(i),z_tag(i)]';
+        %find the closest imu measurement
+        [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
+        DCM = angle2dcm( yaw(num(1)), pitch(num(1)), roll(num(1)));
+        est_pos(:,i) = tag1 - DCM*z;
+    end
+end
+    
+%% plot the results
+
+figure(20)
+plot(timeCamA, est_pos(1,:),'o');
+hold on
+plot(timeCamA, est_pos(2,:),'o');
+hold on
+plot(timeCamA, est_pos(3,:),'o')
+xlabel('time (s)')
+ylabel('position (m)')
+legend('x position','y position', 'z position')
+
+figure(21)
+plot3(est_pos(1,:),est_pos(2,:),est_pos(3,:),'o')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
