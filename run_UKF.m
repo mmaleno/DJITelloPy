@@ -7,7 +7,7 @@
 clear all
 clear figure
 
-global a b k lambda nmu wc wm
+global a b k lambda nmu wm wc tag_coords
 
 a = 0.75; %alpha, controls spread of sigma points
 b = 2; %beta, 2 is best for gaussian state distributions
@@ -17,6 +17,12 @@ lambda = a^2*(nmu+k)-nmu;
 
 wm = [lamba/(nmu+lambda);1/(2*(nmu+lambda))*ones(2*nmu,1)];
 wc = [lamba/(nmu+lambda)+(1-a^2+b);1/(2*(nmu+lambda))*ones(2*nmu,1)];
+
+% Coordinates of tag(s) in global frame
+% Tag order: Tag36h11
+tag_coords = [2.8448 0 -1.4224]';
+
+
 % Load Data
 
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10.csv';
@@ -93,41 +99,41 @@ Sigma_z = ones(3,3); %x_tag_l,y_tag_l,z_tag_l
 
 % callibration procedure will occur when the vehicle is on a flat surface
 
-[times_of_flight,heights_for_times] = find(height(20:end) ~= 0); % finds indices and values for hieghts not equal to zero
-takeoff = times_of_flight(1)-20; % index for when the drone takes off. Callibration procedures will end
+[indices_real_data,accels] = find(a_z ~= -1); % finds indices and values for hieghts not equal to zero
+[takeoff_point,accels] = find(a_z > 10.5); % finds indices and values for hieghts not equal to zero
+start_data= indices_real_data(1);
+takeoff = takeoff_point(1); % index for when the drone takes off. Callibration procedures will end
 
 % calculate offsets during callibration procedure
-ax_bias = mean(a_g(1,20:takeoff));
-ay_bias = mean(a_g(2,20:takeoff));
-az_bias = mean(a_g(3,20:takeoff));
+ax_bias = mean(a_x(start_data:takeoff));
+ay_bias = mean(a_y(start_data:takeoff));
+az_bias = mean(a_z(start_data:takeoff));
 
 % delete these offsets from data
 
-a_g(1,:)= a_g(1,:) - ax_bias;
-a_g(2,:)= a_g(2,:) - ay_bias;
-a_g(3,:)= a_g(3,:) - az_bias;
+a_x = a_x - ax_bias;
+a_y = a_y - ay_bias;
+a_z = a_z - az_bias;
 
 %% Initialize the filter
 
 % Empty vectors to fill
 nt = length(time);
 
-SIGMA_POINTS = zeros(
-STATE_ESTIMATES = zeros(nx,nt);
-SIGMA = zeros(nx,nx,nt);
-STATE_PREDICTIONS = zeros(nx,nx,nt);
-PREDICTION_SIGMA = zeros(nx,nx,nt);
+SIGMA_POINTS = zeros(nmu,2*nmu+1,nt);
+STATE_ESTIMATES = zeros(nmu,nt);
+SIGMA = zeros(nmu,nmu,nt);
 
 %initial starting point
 
 mu_prev = [0;0;0;0;0;0;0;0;0];
 
-Sigma_prev = diag([1,1,1,1,1,1,1,1,1]);
+Sigma_prev = diag([1,1,1,1,1,1,1,1,1]); % maybe adjust these
 
-sigma_points_prev = get_sigma_points(mu_prev,Sigma_prev)
+sigma_points_prev = get_sigma_points(mu_prev,Sigma_prev);
 
 
-%%
+%% Main Filter
 %%%%%%%%%%%%%% Main Kalman Filter Algorithm %%%%%%%%%%%%%%%
 
 % Filter Setup
@@ -152,66 +158,94 @@ sigma_points_prev = get_sigma_points(mu_prev,Sigma_prev)
 % 	5.6	Calculate Kalman Gain
 % 	5.7	Calculate state estimate & covariance
 
-index_april = 1;
-for t = 1:length(time)
-    
+index_april = 1; % index to track video frame
+
+for t = (takeoff-1):length(time)
     %% Set variables for loop
-    U = [
+    dt = time(t)-time(t-1);
+    U_t = [a_x(t), a_y(t), a_z(t), roll(t), pitch(t), yaw(t)]';
+    
     %% Prediction Step
-    global nmu
+    %global nmu wm
     %Calculate the predicted state by propegating through the motion model
-    for i= [1:2*nmu+1]
-    mu_prop = propagate_state(mu_prev,U_t);
     
-
-   
-
-    %calculate the new covariance matrix by adding the covariance of the
-    %previous state and the control data after propegating them through the
-    %motion model
-    Sigma_pred = Gx*Sigma_prev*Gx' + Gu*Sigma_u*Gu';
-
-    % we now have the predicted state with mean mu_prop and covariance
-    % Sigma_pred
-
-
+    sigma_points_prop = zeros(nmu,2*nmu+1);
+    mu_bar = zeros(nmu,1);
+    
+    for i = 1:2*nmu+1
+        sigma_points_prop(:,i) = propagate_state(sigma_points_prev(:,i),U_t,dt);
+        mu_bar = mu_bar + wm(i)*sigma_points_prop(:,i);
+    end
+    
+    Sigma_pred = zeros(nmu);
+    R_t = diag(0.05*ones(nmu,1)); %TODO: get uncertainties for IMU
+    
+    % TODO: what the fuck is this math/dimensionality
+    for i = 1:2*nmu+1
+        Sigma_pred = Sigma_pred + wc(i)*(sigma_points_prop(:,i)-mu_bar)*(sigma_points_prop(:,i)-mu_bar)' + R_t;
+    end
+    
+    sigma_points_pred = get_sigma_points(mu_bar,Sigma_pred);
+    
     %% Correction Step
+    
+    %global tag_coords
+    
     if time(t) > timeCamA(index_april)
-        
-    %calculate the predicted measurement from the state prediction
-    Z_pred = calc_meas_prediction(mu_prop);
+        if tagDetected(index_april)
+            Z_t = [x_tag, y_tag, z_tag]';
+            
+            z_prop = zeros(nmu,2*nmu+1);
+            % 	5.1	Calculate predicted measurement points
+            % 	5.2 Calculate mean predicted measurement
+            for i = 1:2*nmu+1
+                z_prop(:,i) = calc_meas_prediction(sigma_points_pred(:,i),Z_t);
+                z_bar = z_bar + wm(i)*z_prop(:,i);
+            end
+            
+            % 	5.3	Calculate measurement model uncertainty
+            % 	5.5	Calculate cross-covariance
+            S_t = zeros(length(Z_t));
+            Sigma_z = 0.10*eye(length(Z_t)); % TODO: make this more legit, prob not a diag
+            Sigma_mu_z = zeros([nmu,length(Z_t)]);
+            for i = 1:2*nmu+1
+                S_t = S_t + + wc(i)*(z_prop(:,i)-z_bar)*(z_prop(:,i)-z_bar)' + Sigma_z;
+                Sigma_mu_z = Sigma_mu_z + wc(i)*(sigma_points_pred(:,i)-mu_bar)*(z_prop(:,i)-z_bar)';
+            end
+            
+            % 	5.6	Calculate Kalman Gain
+            K_t = Sigma_mu_z * S_t^-1;
+            
+            % 	5.7	Calculate state estimate & covariance
+            mu_corr = mu_bar + K_t*(Z_t - z_bar);
+            Sigma_corr = Sigma_pred - K_t*S_t*K_t';
+            sigma_points_corr = get_sigma_points(mu_corr,Sigma_corr);
+            
+            STATE_ESTIMATES(:,t) = mu_corr;
+            SIGMA_POINTS(:,:,t) = sigma_points_corr;
+            SIGMA(:,:,t) = Sigma_corr;
 
-    %calculate the jacobian of the measurement model with respect to the state
-    %vector X at the point mu_prop
-    H = cal_meas_jacobian(mu_prop);
+        else % no tag detected in current frame
+            STATE_ESTIMATES(:,t) = mu_bar;
+            SIGMA_POINTS(:,:,t) = sigma_points_pred;
+            SIGMA(:,:,t) = Sigma_pred;
+        end
 
-    % Calculate the Kalman Gain
-    K = Sigma_pred*H'*inv(H*Sigma_pred*H'+Sigma_z);
+        index_april = index_april+1;
 
-    % Calculate the new state estimate
-    X_t = mu_prop + K*(Z_t-H*mu_prop);
+    else % not on timestep of video frame
+        STATE_ESTIMATES(:,t) = mu_bar;
+        SIGMA_POINTS(:,:,t) = sigma_points_pred;
+        SIGMA(:,:,t) = Sigma_pred;
+    end
 
-    % Calculate the new state estimate covariance
-    Sigma_t = (eye(length(X_t))-K*H)*Sigma_pred;
-
-    % we now have the new state estimate with mean X_t and covariance
-    % Sigma_t
-
-    %% Save information
-    
-    STATE_ESTIMATES(:,n) = X_t;
-    SIGMA(:,:,n) = Sigma_t;
-    STATE_PREDICTIONS(:,n) = mu_prop;
-    PREDICTION_SIGMA(:,:,n) = Sigma_pred;
-    
-    
     %% Update Variables
-    mu_prev = X_t;
-    Sigma_prev = Sigma_t;
-
+    mu_prev = STATE_ESTIMATES(:,t);
+    sigma_points_prev = SIGMA_POINTS(:,:,t);
+    Sigma_prev = SIGMA(:,:,t);
 end
 
-
+%%
 %%%%%%%%%%%%%%%%%% Plotting %%%%%%%%%%%%%%%%%%%%%
 
 % figure(1)
@@ -261,6 +295,7 @@ for i = 250:length(time)
     hold off
 end
 
+%%
 %%%%%%%%%%%%% Supporting Functions %%%%%%%%%%%%%%%%%%%%%%%
 
 function [sigma_points] = get_sigma_points(mu,Sigma)
@@ -275,7 +310,7 @@ end
 
 %% Motion model
 
-function [state_prop] = propagate_state(mu_prev,U_t,dt)
+function [state_prop] = propagate_state(state_prev,U_t,dt)
 % this function uses the motion model to calculate the propagated sigma
 % point
 
@@ -285,11 +320,11 @@ pitch_meas = U_t(5);
 yaw_meas = U_t(6);
 
 
-DCM = angle2dcm( yaw_meas, pitch_meas, roll_meas);
+DCM = angle2dcm(yaw_meas, pitch_meas, roll_meas);
 a_g = DCM*a_l; %rotate to global coordinate system
 a_g(3) = a_gi(3)-9.81; %correct for gravity in z direction
-pos = mu_prev(1:3)'+ mu_prev(4:6)'.*dt;
-v = mu_prev(4:6)'+ a_g.*dt;
+pos = state_prev(1:3)'+ state_prev(4:6)'.*dt;
+v = state_prev(4:6)'+ a_g.*dt;
 angles = U_t(7:9); % TODO: think about this one later
 
 state_prop = [pos;v;angles];
@@ -298,34 +333,11 @@ end
 
 %% Measurement Model
 
-function [Z_pred] = calc_meas_prediction(mu_prop)
+function [z_prop] = calc_meas_prediction(state_pred,Z_t)
 % this function calculates a predicted measurement from the predicted state
-
-%because our measurements are of our state variables (with no
-%transformations), our measurement prediction is simply:
-    Z_pred = mu_prop;
-end
-
-function [H] = cal_meas_jacobian(mu_prop)
-% this function calculates the jacobian of the measurement model with
-% respect to the state vector at the given point mu_prop
-
-% in this problem, the measurements are exactly that of our state vector
-H =  [ 1, 0, 0;
-       0, 1, 0;
-       0, 0, 1];
-end
-
-%% Wrap the angles
-function [angle_wrapped] = wrap_to_pi(angle)
-    while angle >= pi
-        angle = angle - 2*pi
-    end
-    
-    while angle <= pi
-        angle = angle + 2*pi
-    end
-    angle_wrapped = angle
+    global tag_coords
+    DCM = angle2dcm(state_pred(9), state_pred(8), state_pred(7));
+    z_prop = DCM'*(tag_coords-state_pred(1:3));
 end
 
 %% Import Data
