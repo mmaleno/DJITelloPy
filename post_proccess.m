@@ -56,10 +56,41 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-
 %% Experiment 9: testing the measurement model
 
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10.csv';
-
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10_april.csv';
 % start at origin. move up to level with the tag. Move left about 2 meters.
 % Move back to x,y origin. move towards tag. Look around, but stay 1m from
 % tag
+
+%% Experiment 10: Staying in same position and looking at april tag, but in different orrientations.
+
+% sat it on a chair and rotated, staying stationary .8 meters from tag
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_25_00_25_29.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_25_00_25_29_april.csv';
+
+%% Experiment 11: Similar to 10 but more controlled.  Staying in same position and looking at april tag, but in different orrientations.
+
+% sat it on a chair and rotated, staying stationary .8 meters from tag
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_26_15_58_07.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_26_15_58_07_april.csv';
+
+%% Experiment 12: flying in place and changing yaw.  
+
+%start on ground about 2.5 meters from tag. Hover to .5 meters above tag
+%and change yaw
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_18_43_48.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_18_43_48_april.csv';
+
+
+%% Experiment 13
+% Started on ground, took off and rose to .2 meters above tag.  Looked
+% around.  Moved about 1 meter forward and one meter to the left in
+% diagonal straight line to [1.5,-1.5,-.3] then moved backwards to
+% [0,-1.5,-.3] then dropped to ground
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26_april.csv';
+
 
 %% Import data from text file.
 
@@ -104,10 +135,10 @@ a_z = dataArray{:, 17}.*(-1/1000*9.8);%m/s^2
 %clearvars filename delimiter formatSpec fileID dataArray ans;
 
 %% import apriltag measurment data
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10_april.csv';
+
 delimiter = ',';
 formatSpec = '%f%f%f%f%f%f%[^\n\r]';
-fileID = fopen(filename,'r');
+fileID = fopen(filename_april,'r');
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'EmptyValue' ,NaN, 'ReturnOnError', false);
 fclose(fileID);
 % Allocate imported array to column variable names
@@ -136,7 +167,7 @@ plot(time, pitch)
 t_lost_cam = 21.1; %camera time that apriltag is lost
 t_lost_imu = 23.72; %imu pitch begins at 23.65 to 23.72 seconds
 
-t_diff = 23.72-21.1;
+t_diff = 0;%23.72-21.1;  % this is actually pretty different for each trial
 
 timeCamA = timeCam+t_diff
 
@@ -201,6 +232,13 @@ legend('Roll','Pitch','Yaw')
 
 
 
+
+
+
+
+%%
+%%%%%%%%%%%%% Measurement Model Explorations %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% numerically integrate velocity values to propegate state
 delta_t = time(2:end) - time(1:end-1)
 
@@ -228,19 +266,6 @@ plot(x_pos,y_pos)
 title('x,y path from velocity integration')
 xlabel('x position (m)')
 ylabel('y Position (m)')
-
-
-%% Resample because it takes forever with this many data points
-
-N = 1 %sample one every N samples
-
-time = time(1:N:end);
-pitch = pitch(1:N:end);
-roll = roll(1:N:end);
-yaw = yaw(1:N:end);
-a_x = a_x(1:N:end);
-a_y = a_y(1:N:end);
-a_z = a_z(1:N:end);
 
 
 %% transform accelerations
@@ -405,7 +430,6 @@ plot(time(11:end),v_za)
 legend('x velocity','y velocity','z velocity')
 title('Velocities integrated from global accelerations')
 
-
 %% Motion model only using the roll pitch and yaw
 % this model uses the assumption that the quadcopter motors have the thrust
 % vector straight down in the local frame. In order to maintain propper
@@ -503,6 +527,132 @@ legend('x velocity','y velocity','z velocity')
 title('Velocities integrated from global accelerations')
 
 
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%% Meaurement Model Exploration %%%%%%%%%%%%%%%%%%%%%%%
+%% plot local april tag measurements
+
+figure(26)
+plot(timeCamA,x_tag,'o')
+hold on
+plot(timeCamA,y_tag,'o')
+hold on
+plot(timeCamA,z_tag,'o')
+hold on
+plot(timeCamA,sqrt(x_tag.^2+y_tag.^2+z_tag.^2),'o')
+hold on 
+plot(time,yaw)
+legend('x','y','z','distance')
+
+%% find tag global position, assuming drone starts at origin and is aligned, or insert measured value
+[num,val] = find(tagDetected == 1)
+tag1 = [x_tag(num(1)),y_tag(num(1)),z_tag(num(1))]'
+
+%% Measurement model (estimate global position from local tag measurement)
+
+
+
+tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct
+
+% rotation matrix accounting for missalignment of camera and local
+% coordinate system
+
+DCM_CAM = angle2dcm(0,.24105,0); %This is arbitrary allignment of camera. Find actual allignement
+
+est_pos = zeros(3,length(timeCamA));
+
+%rotate to global frame and translate to origin
+for i=1:length(timeCamA)
+    if tagDetected(i) ==1
+        t = timeCamA(i);
+        z = [x_tag(i),y_tag(i),z_tag(i)]';   
+        %find the closest imu measurement
+        [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
+        DCM = angle2dcm( yaw(num(1)), pitch(num(1)), roll(num(1)));
+        est_pos(:,i) = tag1 - DCM'*(DCM_CAM*z);
+    end
+end
+
+%% or using quaternion rotations (dont use this one, it flips some stuff)
+
+%tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct %exp 9
+% tag1 = [0,0,0]';
+% 
+% est_pos = zeros(3,length(timeCamA));
+% 
+% %rotate to global frame and translate to origin
+% for i=1:length(timeCamA)
+%     if tagDetected(i) ==1
+%         t = timeCamA(i);
+%         %z = [x_tag(i),y_tag(i),z_tag(i)]';
+%         z = [x_tag(i),y_tag(i),z_tag(i)]';
+%         %find the closest imu measurement
+%         [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
+%         %DCM = angle2dcm( yaw(num(1)), pitch(num(1)), roll(num(1)));
+%         q = angle2quat(yaw(num(1)), pitch(num(1)), roll(num(1)),'ZYX');
+%         DCM = quat2dcm(q);
+%         est_pos(:,i) = tag1 - DCM'*(z);
+%     end
+% end
+
+%% plot the results
+
+figure(20)
+plot(timeCamA, est_pos(1,:),'o');
+hold on
+plot(timeCamA, est_pos(2,:),'o');
+hold on
+plot(timeCamA, est_pos(3,:),'o')
+hold on
+plot(time,yaw)
+xlabel('time (s)')
+ylabel('position (m)')
+legend('x position','y position', 'z position','yaw')
+
+% figure(21)
+% title('global position')
+% plot3(est_pos(1,:),est_pos(2,:),est_pos(3,:),'o')
+% xlabel('x')
+% ylabel('y')
+% zlabel('z')
+
+
+%% test 2 DOF system
+
+%tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct %exp 9
+tag1 = [0,0]';
+
+est_pos = zeros(2,length(timeCamA));
+
+%rotate to global frame and translate to origin
+for i=1:length(timeCamA)
+    if tagDetected(i) ==1
+        t = timeCamA(i);
+        z = [x_tag(i),y_tag(i)]';
+        %find the closest imu measurement
+        [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
+        
+        DCM = [cos(yaw(num(1))),-sin(yaw(num(1))); sin(yaw(num(1))), cos(yaw(num(1)))];
+        est_pos(:,i) = tag1 - DCM*(z);
+    end
+end
+        
+figure(21)
+plot(timeCamA, est_pos(1,:),'o');
+hold on
+plot(timeCamA, est_pos(2,:),'o');
+hold on
+plot(time,yaw)
+xlabel('time (s)')
+ylabel('position (m)')
+legend('x position','y position','yaw')
+
+
+
 %% Testing different DCM from euler angles. None of them are good. Let's assume for now the built in matlab function is working propperly
 
 yaw = .8;
@@ -530,56 +680,7 @@ vec_g1 = DCM1*vec
 vec_g2 = DCM2*vec
 vec_g3 = DCM3*vec
 
-%% Measurement model (estimate global position from local tag measurement)
+%% callibrating camera angle with respect to local frame
 
-
-tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct
-
-
-est_pos = zeros(3,length(timeCamA));
-
-%rotate to global frame and translate to origin
-for i=1:length(timeCamA)
-    if tagDetected(i) ==1
-        t = timeCamA(i);
-        z = [x_tag(i),y_tag(i),z_tag(i)]';
-        %find the closest imu measurement
-        [num,timeval]=find(time>timeCamA(i)); %just taking next imu val
-        DCM = angle2dcm( yaw(num(1)), pitch(num(1)), roll(num(1)));
-        est_pos(:,i) = tag1 - DCM*z;
-    end
-end
-    
-%% plot the results
-
-figure(20)
-plot(timeCamA, est_pos(1,:),'o');
-hold on
-plot(timeCamA, est_pos(2,:),'o');
-hold on
-plot(timeCamA, est_pos(3,:),'o')
-xlabel('time (s)')
-ylabel('position (m)')
-legend('x position','y position', 'z position')
-
-figure(21)
-plot3(est_pos(1,:),est_pos(2,:),est_pos(3,:),'o')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+atan(5*.295/6)
 
