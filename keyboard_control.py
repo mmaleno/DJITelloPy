@@ -41,6 +41,7 @@ class FrontEnd(object):
         self.speed = 10
 
         self.send_rc_control = False
+        self.send_custom_command = False
 
         # create update timer
         pygame.time.set_timer(pygame.USEREVENT + 1, 50)
@@ -140,12 +141,19 @@ class FrontEnd(object):
         elif key == pygame.K_l:  # land
             self.tello.land()
             self.send_rc_control = False
+        elif key == pygame.K_c:  # do custom flight path
+            self.send_rc_control = False
+            self.send_custom_command = True
 
     def update(self):
         """ Update routine. Send velocities to Tello."""
         if self.send_rc_control:
             self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity, self.up_down_velocity,
                                        self.yaw_velocity)
+        if self.send_custom_command:
+            self.tello.move_forward(200)
+            self.tello.move_back(200)
+            self.send_custom_command = False
 
 
 def main():
