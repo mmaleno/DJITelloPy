@@ -107,6 +107,8 @@ venv.bak/
 #*.csv
 *.avi
 #*.mov
+*.mp4
+*.MP4
 .DS_Store
 *.icloud
 *~
