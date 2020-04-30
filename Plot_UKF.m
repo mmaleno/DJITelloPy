@@ -1,12 +1,26 @@
 %%%%%%%%%%%%%%%%% Plotting %%%%%%%%%%%%%%%%%%%%%
 
+clf;
+
 %still plot for now
 
 figure(24) %3D plot
-plot3(STATE_ESTIMATES(1,:),STATE_ESTIMATES(2,:),STATE_ESTIMATES(3,:),'o') % plots the state estimate
-xlabel('x position (m)')
-ylabel('y position (m)')
-zlabel('z position (m)')
+%plot3(STATE_ESTIMATES(1,:),-STATE_ESTIMATES(2,:),-STATE_ESTIMATES(3,:),'o') % plots the state estimate
+persistance = 25;
+delay = 0.05;
+for i = 1:length(STATE_ESTIMATES(1,:))
+    if i<persistance+1
+        plot3(STATE_ESTIMATES(1,1:i),-STATE_ESTIMATES(2,1:i),-STATE_ESTIMATES(3,1:i),'o')
+    else
+        plot3(STATE_ESTIMATES(1,i-persistance:i),-STATE_ESTIMATES(2,i-persistance:i), ...
+                                            -STATE_ESTIMATES(3,i-persistance:i),'o')
+    end
+    xlabel('x position (m)')
+    ylabel('~y position (m)')
+    zlabel('~z position (m)')
+    axis([-0.75, 2.5, -0.2, 0.4, -1, 1])
+    pause(delay)
+end
 
 figure(25) %1D plot over time
 plot(STATE_ESTIMATES(1,:))
@@ -14,6 +28,7 @@ hold on
 plot(STATE_ESTIMATES(2,:))
 hold on
 plot(STATE_ESTIMATES(3,:))
+legend('x','y','z')
 
 % % Motion plot with covariance ellipses
 % figure(1)

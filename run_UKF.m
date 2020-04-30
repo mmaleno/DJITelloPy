@@ -25,16 +25,13 @@ tag_coords = [2.74,0.29,-0.67]';%for linear test
 
 % Load Data
 
-% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10.csv';
-% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_23_17_40_10_april.csv';
-% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_24_16_20_52.csv';
-% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_24_16_20_52_april.csv';
+% Kev comp
+%filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
+%filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
 
-% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26.csv';
-% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26_april.csv';
-
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
-filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
+% Max comp
+filename = 'clean_trials/Linear_imu.csv';
+filename_april = 'clean_trials/Linear_april.csv';
 delimiter = ',';
 
 formatSpec = '%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%[^\n\r]';
@@ -161,6 +158,7 @@ apriltag_detections = 0;
 
 for t = (takeoff-1):length(time)
 %for t = (takeoff-1):1148
+    t
     %% Set variables for loop
     dt = time(t)-time(t-1);
     U_t = [a_x(t), a_y(t), a_z(t), roll(t), pitch(t), yaw(t)]';
@@ -202,10 +200,15 @@ for t = (takeoff-1):length(time)
     end
     Sigma_pred = Sigma_pred+R_t; %only add R_t once
     
-                % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
+            % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
             % as a way of fixing the positive definite covariance matrix
             % problem
             Sigma_pred = .5*Sigma_pred+.5*Sigma_pred' + .00001*eye(nmu);
+            
+            % more links for reference:
+            % https://stats.stackexchange.com/questions/48188/unscented-kalman-filter-negative-covariance-matrix
+            % https://stats.stackexchange.com/questions/6364/making-square-root-of-covariance-matrix-positive-definite-matlab/6367#6367
+            % https://www.researchgate.net/post/Guarantee_positiv_definite_P_in_an_UKF
     
     sigma_points_pred = get_sigma_points(mu_bar,Sigma_pred);
     
@@ -403,8 +406,8 @@ function [sigma_points] = get_sigma_points(mu,Sigma)
 % This function generates 2n+1 sigma points give the mean state and
 % covariance of the state
 global lambda nmu
-Sigma(Sigma < 0) = 0;
-Sigma
+%Sigma(Sigma < 0) = 0;
+Sigma = validateCovMatrix(Sigma);
 sigma_points = [mu,mu + chol((nmu+lambda)*Sigma),mu - chol((nmu+lambda)*Sigma)];
 
 end
@@ -440,6 +443,44 @@ function [z_prop] = calc_meas_prediction(state_pred,Z_t)
     DCM_CAM = angle2dcm(0,.19,0);
     DCM = angle2dcm(state_pred(9), state_pred(8), state_pred(7));
     z_prop = DCM_CAM'*(DCM*(tag_coords-state_pred(1:3)));
+end
+
+% from https://stats.stackexchange.com/questions/6364/making-square-root-of-covariance-matrix-positive-definite-matlab/6367#6367
+function [sigma] = validateCovMatrix(sig)
+
+% [sigma] = validateCovMatrix(sig)
+%
+% -- INPUT --
+% sig:      sample covariance matrix
+%
+% -- OUTPUT --
+% sigma:    positive-definite covariance matrix
+%
+
+EPS = 10^-6;
+ZERO = 10^-10;
+
+sigma = sig;
+[~, err] = cholcov(sigma, 0);
+
+if (err ~= 0)
+    % the covariance matrix is not positive definite!
+    [v, d] = eig(sigma);
+
+    % set any of the eigenvalues that are <= 0 to some small positive value
+    for n = 1:size(d,1)
+        if (d(n, n) <= ZERO)
+            d(n, n) = EPS;
+        end
+    end
+    % recompose the covariance matrix, now it should be positive definite.
+    sigma = v*d*v';
+
+    [~, err] = cholcov(sigma, 0);
+    if (err ~= 0)
+        disp('ERROR!');
+    end
+end
 end
 
 %% Confidence Elipse
