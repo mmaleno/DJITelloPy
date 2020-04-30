@@ -85,12 +85,28 @@ filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apr
 %% Experiment 13
 % Started on ground, took off and rose to .2 meters above tag.  Looked
 % around.  Moved about 1 meter forward and one meter to the left in
-% diagonal straight line to [1.5,-1.5,-.3] then moved backwards to
-% [0,-1.5,-.3] then dropped to ground
+% diagonal straight line to [1.5,-1.5,-1.5] then moved backwards to
+% [0,-1,-1.5] then dropped to ground
 
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26.csv';
 filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_27_19_30_26_april.csv';
 
+%% Experiment 14
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_28_16_54_36.csv';
+
+% used to callibrate IMU and find error statistics
+% stationary for 30 seconds, then hover for 30 seconds
+
+%% Experiment 15
+
+% used to callibrate x position tag measurement
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_29_13_36_24_april.csv';
+
+%% Linear TEST
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
 
 %% Import data from text file.
 
@@ -293,7 +309,7 @@ a_g = [];
 for i=1:length(roll)
     a = a_l(:,i);
     dcm_i = angle2dcm( yaw(i), pitch(i), roll(i));
-    a_gi = dcm_i*a;
+    a_gi = dcm_i'*a;
     a_gi(3) = a_gi(3)-9.81; %correct for gravity in z direction
     a_g = [a_g,a_gi];
     
@@ -346,9 +362,20 @@ legend('x acceleration', 'y acceleration', 'z acceleration')
 
 %% if desired, smooth the data using MATLABs built in moving average filter
 
-a_g(1,:)= smooth(a_g(1,:));
-a_g(2,:)= smooth(a_g(2,:));
-a_g(3,:)= smooth(a_g(3,:));
+a_g_smooth(1,:)= smooth(a_g(1,:));
+a_g_smooth(2,:)= smooth(a_g(2,:));
+a_g_smooth(3,:)= smooth(a_g(3,:));
+
+figure(8)
+title('Smoothed,Callibrated Global accelerations')
+xlabel('Time')
+ylabel('acceleration (mg)')
+plot(time,a_g_smooth(1,:))
+hold on
+plot(time,a_g_smooth(2,:))
+hold on
+plot(time,a_g_smooth(3,:))
+legend('x acceleration', 'y acceleration', 'z acceleration')
 
 %% numerically integrate accelleration values to propegate state
 
@@ -556,12 +583,12 @@ tag1 = [x_tag(num(1)),y_tag(num(1)),z_tag(num(1))]'
 
 
 
-tag1 = [112/39.37,0,-56/39.37]'; %measurements are from the center of the tag? not sure if this is correct
+tag1 = [112/39.37,0,-59/39.37]'; %measurements are from the center of the tag? not sure if this is correct
 
 % rotation matrix accounting for missalignment of camera and local
 % coordinate system
 
-DCM_CAM = angle2dcm(0,.24105,0); %This is arbitrary allignment of camera. Find actual allignement
+DCM_CAM = angle2dcm(0,.2317,0); %This is arbitrary allignment of camera. Find actual allignement
 
 est_pos = zeros(3,length(timeCamA));
 
@@ -613,12 +640,12 @@ xlabel('time (s)')
 ylabel('position (m)')
 legend('x position','y position', 'z position','yaw')
 
-% figure(21)
-% title('global position')
-% plot3(est_pos(1,:),est_pos(2,:),est_pos(3,:),'o')
-% xlabel('x')
-% ylabel('y')
-% zlabel('z')
+figure(21)
+title('global position')
+plot3(est_pos(1,:),-est_pos(2,:),-est_pos(3,:),'o')
+xlabel('x')
+ylabel('-y')
+zlabel('-z')
 
 
 %% test 2 DOF system
@@ -682,5 +709,209 @@ vec_g3 = DCM3*vec
 
 %% callibrating camera angle with respect to local frame
 
-atan(5*.295/6)
+atan(1.4155/6)
+
+
+%% Finding covariance of accelerometer data (from exp. 14)
+
+% was stationary for time = [1:30]
+% was hovering for time = [45:70]
+
+% note that once it lands, it has a bias in accelerations. This is due to
+% flickr noise in accelerometer. we may need to account for this
+
+% find indices of takeoff and hover
+[times_of_flight,heights_for_times] = find(time>1);
+stat_start = times_of_flight(1);
+
+[times_of_flight,heights_for_times] = find(time>30);
+stat_end = times_of_flight(1);
+
+[times_of_flight,heights_for_times] = find(time>48);
+hover_start = times_of_flight(1);
+
+[times_of_flight,heights_for_times] = find(time>65);
+hover_end = times_of_flight(1);
+
+
+%stationary white noise
+
+sigma_stationary = [std(a_g(1,stat_start:stat_end));std(a_g(2,stat_start:stat_end));std(a_g(3,stat_start:stat_end))];
+
+% hover white noies and bias
+
+sigma_hover = [std(a_g(1,hover_start:hover_end));std(a_g(2,hover_start:hover_end));std(a_g(3,hover_start:hover_end))];
+bias_hover = [mean(a_g(1,hover_start:hover_end));mean(a_g(2,hover_start:hover_end));mean(a_g(3,hover_start:hover_end))];
+
+
+% there is an additional error due to the projection of gravity onto the
+% global coordinates using an inaccurate compass measurement
+
+ DCM = angle2dcm( 0, 1/180*pi, 0);
+ 
+ %project gravity onto incorrect global frame
+ 
+ proj = DCM'*[0,0,9.81]'
+ % This error is somewhat encorporated into sigma_hover
+ 
+ %try integrating error and compare with pure prediction step plots
+ 
+ dt = .012; %average dt
+ 
+var_position_x = 1/3*dt*time.^3.*sigma_hover(1).^2;
+var_position_y = 1/3*dt*time.^3.*sigma_hover(2).^2;
+var_position_z = 1/3*dt*time.^3.*sigma_hover(3).^2;
+ 
+%plot standard deviations over time
+
+figure(18)
+plot(time, sqrt(var_position_x));
+hold on
+plot(time, sqrt(var_position_x));
+hold on
+plot(time, sqrt(var_position_x));
+title('Standard Deviation of Position over time')
+xlabel('time (s)')
+ylabel('Standard Deviation (m)')
+legend('x','y','z')
+
+
+%% I dont think the above is what we want since the position is corrected in the correction step.  It should be the velocity error multiplied by dt.
+
+% velocity covariance
+v_var = [];
+v_var_prev = [0,0,0]';
+
+for i=1:length(time)
+    v_var_prev = v_var_prev + (sigma_hover).^2*dt+.01;
+    v_var = [v_var,v_var_prev];
+end
+
+figure(19)
+plot(time,v_var(1,:))
+hold on
+plot(time,v_var(2,:))
+hold on
+plot(time,v_var(3,:))
+legend('x','y','z')
+
+
+
+%% Camera callibration in x direction (exp. 15)
+
+% first plot the data and find indices for each measurement
+figure(26)
+plot(x_tag,'o')
+hold on
+plot(y_tag,'o')
+hold on
+plot(z_tag,'o')
+hold on
+%plot(timeCamA,sqrt(x_tag.^2+y_tag.^2+z_tag.^2),'o')
+%hold on 
+% plot(time,yaw)
+legend('x','y','z','distance')
+
+%times
+ti2 = 487;
+tf2 = 725;
+ti3 = 829;
+tf3 = 1012;
+ti4 = 1134;
+tf4 = 1352;
+ti5 = 1465;
+tf5 = 1648;
+ti6 = 1774;
+tf6 = 1948;
+ti7 = 2035;
+tf7 = 2219;
+ti8 = 2323;
+tf8 = 2422;
+ti9 = 2536;
+tf9 = 2602;
+
+% apply camera -> body transformation (note that this has to be done but
+% may add additional error)
+
+x_corrected = [];
+y_corrected = [];
+z_corrected = [];
+
+DCM_CAM = angle2dcm(0,.19,0);
+for i = 1:length(x_tag)
+    pos_corrected = DCM_CAM*[x_tag(i),y_tag(i),z_tag(i)]';
+    %pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]'*(.1479+.01)/.1479); % this
+    %correction makes data fit better
+    pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]'*0.6096/.5877);
+    x_corrected=[x_corrected,pos_corrected(1)];
+    y_corrected=[y_corrected,pos_corrected(2)];
+    z_corrected=[z_corrected,pos_corrected(3)];
+end
+
+
+% set no tag detected to NaN
+x_corrected(x_corrected<-20) = NaN;
+y_corrected(y_corrected<-20) = NaN;
+z_corrected(z_corrected<-20) = NaN;
+
+%plot new corrected data (make sure z stays constant
+figure(27)
+plot(x_corrected,'o')
+hold on
+plot(y_corrected,'o')
+hold on
+plot(z_corrected,'o')
+hold on
+%plot(timeCamA,sqrt(x_tag.^2+y_tag.^2+z_tag.^2),'o')
+%hold on 
+% plot(time,yaw)
+legend('x','y','z','distance')
+
+% find mean values
+x2 = mean(x_corrected(ti2:tf2),'omitnan');
+x3 = mean(x_corrected(ti3:tf3),'omitnan');
+x4 = mean(x_corrected(ti4:tf4),'omitnan');
+x5 = mean(x_corrected(ti5:tf5),'omitnan');
+x6 = mean(x_corrected(ti6:tf6),'omitnan');
+x7 = mean(x_corrected(ti7:tf7),'omitnan');
+x8 = mean(x_corrected(ti8:tf8),'omitnan');
+x9 = mean(x_corrected(ti9:tf9),'omitnan');
+xmean = [x2,x3,x4,x5,x6,x7,x8,x9];
+
+% find standard deviations
+
+x2_std = std(x_corrected(ti2:tf2),'omitnan');
+x3_std  = std(x_corrected(ti3:tf3),'omitnan');
+x4_std  = std(x_corrected(ti4:tf4),'omitnan');
+x5_std  = std(x_corrected(ti5:tf5),'omitnan');
+x6_std  = std(x_corrected(ti6:tf6),'omitnan');
+x7_std  = std(x_corrected(ti7:tf7),'omitnan');
+x8_std  = std(x_corrected(ti8:tf8),'omitnan');
+x9_std  = std(x_corrected(ti9:tf9),'omitnan');
+x_std = [x2_std,x3_std,x4_std,x5_std,x6_std,x7_std,x8_std,x9_std];
+
+
+% relative tag position at each position
+z_true = zeros(7,1); %camera alligned with center of tag
+x_true = [2,3,4,5,6,7,8,9]*0.3048;
+y_true = zeros(7,1); %alligned with center of tag (tried to at least)
+
+
+figure(29)
+errorbar(xmean,x_std)
+hold on
+plot(x_true)
+xlabel('Sample Number')
+ylabel('X Distance (m)')
+legend('Camera Measurement with Standard Deviation Bars','True Position')
+
+% standard deviation is very very low, meaning the measurment is precise,
+% but not accurate. We will use the mean bias as error metric
+
+mean_xbias = xmean - x_true
+
+
+
+
+
 
