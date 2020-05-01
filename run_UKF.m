@@ -7,6 +7,21 @@
 clear all
 clear figure
 
+% To Dos: 
+% 
+% 1. Create plots for final deliverable
+% 2. Make Case statements
+%     - Different motion models
+%     - Update velocity with tag measurements to recallibrate
+%     - Different R_t approaches
+%     - Change correction frequency
+% 3. Different path
+%     - rectangular
+%     - complex
+%     - faster velocity
+
+
+
 global a b k lambda nmu wm wc tag_coords
 
 a = 0.75; %alpha, controls spread of sigma points
@@ -26,12 +41,12 @@ tag_coords = [2.74,0.29,-0.67]';%for linear test
 % Load Data
 
 % Kev comp
-%filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
-%filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
 
 % Max comp
-filename = 'clean_trials/Linear_imu.csv';
-filename_april = 'clean_trials/Linear_april.csv';
+% filename = 'clean_trials/Linear_imu.csv';
+% filename_april = 'clean_trials/Linear_april.csv';
 delimiter = ',';
 
 formatSpec = '%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%[^\n\r]';
@@ -82,9 +97,13 @@ fclose(fileID);
 frameNum = dataArray{:, 1};
 timeCam = dataArray{:, 2};
 tagDetected = dataArray{:, 3};
-y_tag = dataArray{:, 4}*0.6096/.5877; % in our local coordinate system
-z_tag = dataArray{:, 5}*0.6096/.5877;
-x_tag = dataArray{:, 6}*0.6096/.5877;
+y_tag = dataArray{:, 4}; % in our local coordinate system
+z_tag = dataArray{:, 5};
+x_tag = dataArray{:, 6};
+%if tag callibration desired
+% y_tag = dataArray{:, 4}*0.6096/.5877; % in our local coordinate system
+% z_tag = dataArray{:, 5}*0.6096/.5877;
+% x_tag = dataArray{:, 6}*0.6096/.5877;
 clearvars filename_april delimiter formatSpec fileID dataArray ans;
 
 timeCamA = timeCam+(time(1)-timeCam(1));
@@ -249,6 +268,10 @@ for t = (takeoff-1):length(time)
             Sigma_corr = Sigma_pred - K_t*S_t*K_t';
             sigma_points_corr = get_sigma_points(mu_corr,Sigma_corr);
             
+            % correct the velocity a super sus way
+%             if method == 1
+%                 time_last_tag = 
+%             
             % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
             % as a way of fixing the positive definite covariance matrix
             % problem
@@ -278,127 +301,6 @@ mu_prev = STATE_ESTIMATES(:,t);
 sigma_points_prev = SIGMA_POINTS(:,:,t);
 Sigma_prev = SIGMA(:,:,t);
 end
-
-%%
-
-
-
-%%%%%%%%%%%%%%%%%% Plotting %%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%% Plotting %%%%%%%%%%%%%%%%%%%%%
-% 
-% 
-% % Motion plot with covariance ellipses
-% figure(1)
-%     window = .5; % used to update moving window
-%     for i = 1:length(time)
-% 
-%         %live plot of the covariance ellipsiod and the state estimate 
-%         subplot1 = subplot(2,4,4);
-% 
-%             %update plotting window
-%             xmax = STATE_ESTIMATES(1,i)+window;
-%             xmin = STATE_ESTIMATES(1,i)-window;
-%             ymax = STATE_ESTIMATES(2,i)+window;
-%             ymin = STATE_ESTIMATES(2,i)-window;
-%             zmax = STATE_ESTIMATES(3,i)+window;
-%             zmin = STATE_ESTIMATES(3,i)-window;
-%             
-%             xlim(subplot1,[xmin ,xmax])
-%             ylim(subplot1,[ymin,ymax])
-%             zlim(subplot1,[zmin,zmax])
-%             view_axis = [1,1,1]; % vector pointing from origin to camera
-%             view(subplot1,view_axis); % set to isometric view
-% 
-%             plot3(STATE_ESTIMATES(1,1:i),STATE_ESTIMATES(2,1:i),STATE_ESTIMATES(3,1:i),'.-k','Parent',subplot1) % plots the state estimate
-%             hold on
-%             
-% 
-%             %ploting covariance elipse only every 20th time step 
-%             if rem(i,20) == 0
-%                 xy_r_ellipse = cov_ellipse(STATE_ESTIMATES(1:2,i),SIGMA(1:2,1:2,i)); % covariance ellipse on xy plane
-%                 yz_r_ellipse = cov_ellipse(STATE_ESTIMATES(2:3,i),SIGMA(2:3,2:3,i)); % covariance ellipse on yz plane
-%                 state_xz = [STATE_ESTIMATES(1,i),STATE_ESTIMATES(3,i)]; % state vector for X = [x:z]
-%                 sig_xz = [SIGMA(1,1,i),SIGMA(1,3,i);SIGMA(3,1,i),SIGMA(3,3,i)]; % covariance matrix for X = [x;z]
-%                 xz_r_ellipse = cov_ellipse(state_xz,sig_xz); % covariance ellipse on xz plane
-%                 plot3(xy_r_ellipse(:,1),xy_r_ellipse(:,2),ones(1,length(xy_r_ellipse(:,2)))*STATE_ESTIMATES(3,i),'-r','Parent',subplot1) % plots the covariance ellipse on the x,y plane
-%                 hold on
-%                 plot3(ones(1,length(yz_r_ellipse(:,2)))*STATE_ESTIMATES(1,i),yz_r_ellipse(:,1),yz_r_ellipse(:,2),'-r','Parent',subplot1) % plots the covariance ellipse on the y,z plane
-%                 hold on 
-%                 plot3(xz_r_ellipse(:,1),ones(1,length(xz_r_ellipse(:,2)))*STATE_ESTIMATES(2,i),xz_r_ellipse(:,2),'-r','Parent',subplot1) % plots the covariance ellipse on the x,z plane
-%                 hold on
-%             end
-% 
-%              xlabel('x position (m)')
-%              ylabel('y position (m)')
-%              zlabel('z position (m)')
-%              title('Real Time State Estimate with Covariance Ellipsiod')
-% 
-% 
-%          subplot2 = subplot(2,4,[1,3]);
-%              % note that these axis limits created below do not create a cube,
-%              % so the relationship between x,y and z are not spacially
-%              % equivalent. However, when a cube is chosen, you can not see the
-%              % state estimate clearly (as the gps measurements are in the way
-%              xmax1 = max(STATE_ESTIMATES(1,:))+1;
-%              xmin1 = min(STATE_ESTIMATES(1,:))-1;
-%              ymax1 = max(STATE_ESTIMATES(2,:))+1;
-%              ymin1 = min(STATE_ESTIMATES(2,:))-1;
-%              zmax1 = max(STATE_ESTIMATES(3,:))+1;
-%              zmin1 = min(STATE_ESTIMATES(3,:))-1;
-% 
-%              % if you want a spacially accurate plotting window, use this:
-% %              xmax1 = 30;
-% %              xmin1 = -30;
-% %              ymax1 = 10;
-% %              ymin1 = -50;
-% %              zmax1 = 45;
-% %              zmin1 = -15;
-%              xlim(subplot2,[xmin1 ,xmax1])
-%              ylim(subplot2,[ymin1,ymax1])
-%              zlim(subplot2,[zmin1,zmax1])
-%              view_axis = [1,1,1]; % vector pointing from origin to camera
-%              view(subplot2,view_axis); % set to isometric view
-% 
-%              plot3(STATE_ESTIMATES(1,:),STATE_ESTIMATES(2,:),STATE_ESTIMATES(3,:),'.-k','Parent',subplot2) % plot state estimate positions for all time
-%              hold on
-%              plot3(STATE_ESTIMATES(1,i),STATE_ESTIMATES(2,i),STATE_ESTIMATES(3,i),'or','Parent',subplot2) % highlight current state estimate
-%              hold on
-%              
-% 
-%              xlabel('x position (m)')
-%              ylabel('y position (m)')
-%              zlabel('z position (m)')
-%              title('Full Path State Estimate Position')
-%              legend('Location','northeast')
-%              legend('Full State Estimate Path','Previous State Estiates','Raw GPS Measurements')
-% 
-%          subplot3 = subplot(2,4,[5,7]);
-%              yaw_std = squeeze(sqrt(SIGMA(9,9,:))); % squeeze gets rid of extra dimensions, sqrt because we want to plot standard deviation
-%              errorbar(time,STATE_ESTIMATES(9,:),yaw_std,'.k')
-%              hold on
-%     %          plot(time,yaw,'xb') % too messy to plot raw data too
-% 
-%              xlabel('Time (s)')
-%              ylabel('Angle (rad)')
-%              title('Yaw State Estimate with Standard Deviation Error Bounds')
-% 
-%           subplot4 = subplot(2,4,8);
-%                      %plot(time,STATE_ESTIMATES(9,:),'.k')
-%              hold on
-%              yaw_std = squeeze(sqrt(SIGMA(4,4,:))); % squeeze gets rid of extra dimensions, sqrt because we want to plot standard deviation
-%              errorbar(time(1:20),STATE_ESTIMATES(4,1:20),yaw_std(1:20),'.k')
-%              hold on
-%     %          plot(time,yaw,'xb') % too messy to plot raw data too
-% 
-%              xlabel('Time (s)')
-%              ylabel('Angle (rad)')
-%              title(' Zoomed in Yaw State Estimate')
-% 
-% 
-%          pause(.01) % pause for real time path
-%          %hold off
-%     end
-
 %%
 %%%%%%%%%%%%% Supporting Functions %%%%%%%%%%%%%%%%%%%%%%%
 
