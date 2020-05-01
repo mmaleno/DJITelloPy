@@ -32,6 +32,7 @@ The keyboard controls for keyboard_control.py are:
 1.  Go into Apriltag/apriltag-master/python
 2.  run "python3 ../../../keyboard_control.py"
 3.  After performing trial, run following command: "python3 apriltag_vid_generator.py -c -k '(865.4575, 867.2598, 481.5149, 361.2172)' -s .16 poop"
+3.0 Use this command for Max's drone: python3 apriltag_vid_generator.py -c -k '(912.906618726668, 935.153100619758, 470.318057440520, 367.001678120807)' -s .16 poop
 3.1 you need to say "poop" at end of line because it is expecting one more argument.  TODO change this in future
 3.2 those are camera params kevin gave me for Tello
 
