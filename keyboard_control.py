@@ -151,9 +151,16 @@ class FrontEnd(object):
             self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity, self.up_down_velocity,
                                        self.yaw_velocity)
         if self.send_custom_command:
-            self.tello.move_forward(200)
-            self.tello.move_back(200)
+            #self.tello.move_forward(200)
+            #self.tello.move_back(200)
+            self.tello.takeoff()
+            self.send_rc_control = True
+            self.tello.go_xyz_speed(150, 0, 0, 20)
+            self.tello.go_xyz_speed(0, 150, 0, 20)
+            self.tello.go_xyz_speed(-150, 0, 0, 20)
+            self.tello.go_xyz_speed(0, -150, 0, 20)
             self.send_custom_command = False
+            self.send_rc_control = True
 
 
 def main():
