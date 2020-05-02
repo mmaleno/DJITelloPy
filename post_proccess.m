@@ -575,6 +575,41 @@ hold on
 plot(time,yaw)
 legend('x','y','z','distance')
 
+%% Plot body frame april tag measurements
+    x_corrected=[];
+    y_corrected=[];
+    z_corrected=[];
+    
+DCM_CAM = angle2dcm(0,.22,0);
+for i = 1:length(x_tag)
+    pos_corrected = DCM_CAM*[x_tag(i),y_tag(i),z_tag(i)]';
+    %pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]'*(.1479+.01)/.1479); % this
+    %correction makes data fit better
+    pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]');
+    x_corrected=[x_corrected,pos_corrected(1)];
+    y_corrected=[y_corrected,pos_corrected(2)];
+    z_corrected=[z_corrected,pos_corrected(3)];
+end
+
+
+% set no tag detected to NaN
+x_corrected(x_corrected<-20) = NaN;
+y_corrected(y_corrected<-20) = NaN;
+z_corrected(z_corrected<-20) = NaN;
+
+%plot new corrected data (make sure z stays constant
+figure(27)
+plot(x_corrected,'o')
+hold on
+plot(y_corrected,'o')
+hold on
+plot(z_corrected,'o')
+hold on
+%plot(timeCamA,sqrt(x_tag.^2+y_tag.^2+z_tag.^2),'o')
+%hold on 
+% plot(time,yaw)
+legend('x','y','z','distance')
+
 %% find tag global position, assuming drone starts at origin and is aligned, or insert measured value
 [num,val] = find(tagDetected == 1)
 tag1 = [x_tag(num(1)),y_tag(num(1)),z_tag(num(1))]'
@@ -583,8 +618,8 @@ tag1 = [x_tag(num(1)),y_tag(num(1)),z_tag(num(1))]'
 
 
 
-tag1 = [112/39.37,0,-59/39.37]'; %measurements are from the center of the tag? not sure if this is correct
-
+%tag1 = [112/39.37,0,-59/39.37]'; %measurements are from the center of the tag? not sure if this is correct
+tag1= [2.74,0.29,-0.67]'; %linear trial
 % rotation matrix accounting for missalignment of camera and local
 % coordinate system
 
