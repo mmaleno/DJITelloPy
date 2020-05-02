@@ -155,12 +155,28 @@ class FrontEnd(object):
             #self.tello.move_back(200)
             self.tello.takeoff()
             self.send_rc_control = True
-            self.tello.go_xyz_speed(150, 0, 0, 20)
-            self.tello.go_xyz_speed(0, 150, 0, 20)
-            self.tello.go_xyz_speed(-150, 0, 0, 20)
-            self.tello.go_xyz_speed(0, -150, 0, 20)
+            #self.tello.go_xyz_speed(100, 0, 0, 20)
+            #time.sleep(7)
+            #self.tello.go_xyz_speed(0, -150, 0, 20)
+            #time.sleep(10)
+            #self.tello.go_xyz_speed(-100, 0, 0, 20)
+            #time.sleep(7)
+            #self.tello.go_xyz_speed(0, 150, 0, 20)
+            #time.sleep(10)
+            #self.tello.land()
+            self.tello.go_xyz_speed(50, 0, 0, 20)
+            time.sleep(4)
+            self.tello.go_xyz_speed(0, -50, 0, 20)
+            time.sleep(4)
+            self.tello.go_xyz_speed(75, 0, 0, 20)
+            time.sleep(5)
+            self.tello.go_xyz_speed(0, 25, 0, 20)
+            time.sleep(3)
+            self.tello.go_xyz_speed(-125, 25, 0, 20)
+            time.sleep(10)
+            self.send_rc_control = False
             self.send_custom_command = False
-            self.send_rc_control = True
+            #self.send_rc_control = True
 
 
 def main():
