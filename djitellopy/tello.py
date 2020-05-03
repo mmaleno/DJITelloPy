@@ -567,7 +567,8 @@ class Tello:
         Returns:
             bool: True for successful, False for unsuccessful
         """
-        return self.send_command_without_return('go %s %s %s %s' % (x, y, z, speed))
+        #return self.send_command_without_return('go %s %s %s %s' % (x, y, z, speed))
+        return self.send_control_command('go %s %s %s %s' % (x, y, z, speed))
 
     @accepts(x1=int, y1=int, z1=int, x2=int, y2=int, z2=int, speed=int)
     def curve_xyz_speed(self, x1, y1, z1, x2, y2, z2, speed):
