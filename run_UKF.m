@@ -2,7 +2,8 @@
 % Max Maleno and Kevin Shoyer
 % 4/23/2020
 
-%ADD DESCRIPTION HERE
+%Functionallity: This Script runs an Unscented Kalman Filter to fuse IMU
+%and computer vision data to estimate a quadcopter's position
 
 clear all
 clear figure
@@ -21,8 +22,15 @@ clear figure
 %     - faster velocity
 
 
+global a b k lambda nmu wm wc tag_coords corrfreq
+global method
 
-global a b k lambda nmu wm wc tag_coords
+%Choose the method used for this trial
+method = 1;
+corrfreq = 1;%only effects method 1
+%methods:
+ %0: run without updating velocity
+ %1: run with updating velocity and update velocity and only see a tag every 1/corrfreq of the time
 
 a = 0.75; %alpha, controls spread of sigma points
 b = 2; %beta, 2 is best for gaussian state distributions
@@ -35,27 +43,28 @@ wc = [lambda/(nmu+lambda)+(1-a^2+b);1/(2*(nmu+lambda))*ones(2*nmu,1)];
 
 % Coordinates of tag(s) in global frame
 % Tag order: Tag36h11
-tag_coords = [2.74,0.29,-0.67]';%for linear test
-
+%tag_coords = [2.74,0.2286,-0.6731]';%for linear test
+tag_coords = [2.74,34*.0254,-0.6731]';%for rectangular test
 
 % Load Data
 
 % Kev comp
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
-filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
+% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
+% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_april.csv';
+
 
 % Max comp
 % filename = 'clean_trials/Linear_imu.csv';
 % filename_april = 'clean_trials/Linear_april.csv';
+
+
 delimiter = ',';
-
 formatSpec = '%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%[^\n\r]';
-
 fileID = fopen(filename,'r');
-
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter,  'ReturnOnError', false);
-
-% Close the text file.
 fclose(fileID);
 
 % Allocate imported array to column variable names and convert to propper
@@ -97,7 +106,7 @@ fclose(fileID);
 frameNum = dataArray{:, 1};
 timeCam = dataArray{:, 2};
 tagDetected = dataArray{:, 3};
-y_tag = dataArray{:, 4}; % in our local coordinate system
+y_tag = dataArray{:, 4}; % in camera coordinate system
 z_tag = dataArray{:, 5};
 x_tag = dataArray{:, 6};
 %if tag callibration desired
@@ -109,25 +118,29 @@ clearvars filename_april delimiter formatSpec fileID dataArray ans;
 timeCamA = timeCam+(time(1)-timeCam(1));
 
 %% Callibrate accelerometers using stationary data. This gets rid of offsets due to misallignment of accelerometer
+% for linear test 
+% % callibration procedure will occur when the vehicle is on a flat surface
+% [start_data,time_calstart] = find(time>36.5);
+% [takeoff,time_calend] = find(time>38);
+% 
+% % [indices_real_data,accels] = find(a_z ~= -1); % finds indices and values for hieghts not equal to zero
+% % [takeoff_point,accels] = find(a_z > 10.5); % finds indices and values for hieghts not equal to zero
+% % start_data= indices_real_data(1);
+% % takeoff = takeoff_point(1); % index for when the drone takes off. Callibration procedures will end
+% 
+% % calculate offsets during callibration procedure
+% ax_bias = mean(a_x(start_data(1):takeoff(1)));
+% ay_bias = mean(a_y(start_data(1):takeoff(1)));
+% az_bias = mean(a_z(start_data(1):takeoff(1)))-9.81; %assuming z is alligned with gravity
+% 
+% % delete these offsets from data
+% a_x = a_x - ax_bias;
+% a_y = a_y - ay_bias;
+% a_z = a_z - az_bias;
 
-% callibration procedure will occur when the vehicle is on a flat surface
-[start_data,time_calstart] = find(time>36.5);
-[takeoff,time_calend] = find(time>38);
+% for rectangular test
+takeoff = 3;
 
-% [indices_real_data,accels] = find(a_z ~= -1); % finds indices and values for hieghts not equal to zero
-% [takeoff_point,accels] = find(a_z > 10.5); % finds indices and values for hieghts not equal to zero
-% start_data= indices_real_data(1);
-% takeoff = takeoff_point(1); % index for when the drone takes off. Callibration procedures will end
-
-% calculate offsets during callibration procedure
-ax_bias = mean(a_x(start_data(1):takeoff(1)));
-ay_bias = mean(a_y(start_data(1):takeoff(1)));
-az_bias = mean(a_z(start_data(1):takeoff(1)))-9.81; %assuming z is alligned with gravity
-
-% delete these offsets from data
-a_x = a_x - ax_bias;
-a_y = a_y - ay_bias;
-a_z = a_z - az_bias;
 
 %% Initialize the filter
 
@@ -174,16 +187,16 @@ sigma_points_prev = get_sigma_points(mu_prev,Sigma_prev);
 v_var_prev = 0; %previous variance in velocity
 index_april = 1; % index to track video frame
 apriltag_detections = 0;
+lastdetection = 0;
+lastcoordinates = [];
 
 for t = (takeoff-1):length(time)
-%for t = (takeoff-1):1148
-    t
+%for t = 114:length(time)
     %% Set variables for loop
     dt = time(t)-time(t-1);
     U_t = [a_x(t), a_y(t), a_z(t), roll(t), pitch(t), yaw(t)]';
     
     %% Prediction Step
-    %global nmu wm
     %Calculate the predicted state by propegating through the motion model
     
     sigma_points_prop = zeros(nmu,2*nmu+1); %will fill
@@ -199,19 +212,17 @@ for t = (takeoff-1):length(time)
     sigma_hover = [2.728282836785659e-01; %Standard deviation of acceleration while hovering in place
                     2.011128064779450e-01;
                     5.632890328326323e-01];
-                
-    v_var_prev = v_var_prev + (sigma_hover).^2*dt+.01;
+            
     
     %R_t = diag(0.05*ones(nmu,1)); %Naive approach from paper
-    
     %R_t = diag(10*ones(nmu,1)); %dont trust IMU at all
-    
     %R_t = diag(zeros(nmu,1)); %Trust it a lot. Does this get rid of chol problem?
-    
     % a little more semi-empirical way:
-    
-    R_t = diag([0.01,0.01,0.01,v_var_prev',0.01,0.01,0.01]); %TODO: figure out how to make this end up being a positive definite
-     %R_t = [
+    theta_offset = .5*pi/180;
+    projection_error = 9.81*[sin(theta_offset),sin(theta_offset),1-cos(theta_offset)]';
+    v_var_prev = v_var_prev + projection_error*dt;
+    %v_var_prev = v_var_prev + (sigma_hover).^2*dt+.01;
+    R_t = diag([0.01^2,0.01^2,0.01^2,v_var_prev',(.7*pi/180)^2,(.7*pi/180)^2,(.7*pi/180)^2]); %TODO: figure out how to make this end up being a positive definite
     %R_t = zeros(nmu);
         
     for i = 1:2*nmu+1
@@ -222,7 +233,7 @@ for t = (takeoff-1):length(time)
             % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
             % as a way of fixing the positive definite covariance matrix
             % problem
-            Sigma_pred = .5*Sigma_pred+.5*Sigma_pred' + .00001*eye(nmu);
+            %Sigma_pred = .5*Sigma_pred+.5*Sigma_pred' + .00001*eye(nmu);
             
             % more links for reference:
             % https://stats.stackexchange.com/questions/48188/unscented-kalman-filter-negative-covariance-matrix
@@ -231,69 +242,129 @@ for t = (takeoff-1):length(time)
     
     sigma_points_pred = get_sigma_points(mu_bar,Sigma_pred);
     
+ 
     %% Correction Step
     
-    %global tag_coords
-    
     if time(t) > timeCamA(index_april)
-        if tagDetected(index_april)
-            apriltag_detections = apriltag_detections+1;
-            Z_t = [x_tag(index_april), y_tag(index_april), z_tag(index_april)]';
-            z_prop = zeros(length(Z_t),2*nmu+1);
-            % 	5.1	Calculate predicted measurement points
-            % 	5.2 Calculate mean predicted measurement
-            z_bar = zeros(length(Z_t),1);
-            for i = 1:2*nmu+1
-                z_prop(:,i) = calc_meas_prediction(sigma_points_pred(:,i),Z_t);
-                z_bar = z_bar + wm(i)*z_prop(:,i);
-            end
-            
-            % 	5.3	Calculate measurement model uncertainty
-            % 	5.5	Calculate cross-covariance
-            S_t = zeros(length(Z_t));
-            Sigma_z = diag([.05,.05,.05]);
-            Sigma_mu_z = zeros([nmu,length(Z_t)]);
-            for i = 1:2*nmu+1
-                S_t = S_t + wc(i)*(z_prop(:,i)-z_bar)*(z_prop(:,i)-z_bar)';
-                Sigma_mu_z = Sigma_mu_z + wc(i)*(sigma_points_pred(:,i)-mu_bar)*(z_prop(:,i)-z_bar)';
-            end
-            S_t = S_t + Sigma_z; %only add Sigma_z once
-            
-            % 	5.6	Calculate Kalman Gain
-            %K_t = Sigma_mu_z*inv(S_t);
-            K_t = Sigma_mu_z/S_t; % 9 by 3
-            
-            % 	5.7	Calculate state estimate & covariance
-            mu_corr = mu_bar + K_t*(Z_t - z_bar);
-            Sigma_corr = Sigma_pred - K_t*S_t*K_t';
-            sigma_points_corr = get_sigma_points(mu_corr,Sigma_corr);
-            
-            % correct the velocity a super sus way
-%             if method == 1
-%                 time_last_tag = 
-%             
-            % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
-            % as a way of fixing the positive definite covariance matrix
-            % problem
-            Sigma_corr = .5*Sigma_corr+.5*Sigma_corr' + .00001*eye(nmu);
-            
-            STATE_ESTIMATES(:,t) = mu_corr;
-            SIGMA_POINTS(:,:,t) = sigma_points_corr;
-            SIGMA(:,:,t) = Sigma_corr;
-            
+        if method == 0 %normal method, not correcting for velocity
+            if tagDetected(index_april)
+                apriltag_detections = apriltag_detections+1;
+                Z_t = [x_tag(index_april), y_tag(index_april), z_tag(index_april)]';
+                z_prop = zeros(length(Z_t),2*nmu+1);
+                % 	5.1	Calculate predicted measurement points
+                % 	5.2 Calculate mean predicted measurement
+                z_bar = zeros(length(Z_t),1);
+                for i = 1:2*nmu+1
+                    z_prop(:,i) = calc_meas_prediction(sigma_points_pred(:,i),Z_t);
+                    z_bar = z_bar + wm(i)*z_prop(:,i);
+                end
 
-        else % no tag detected in current frame
+                % 	5.3	Calculate measurement model uncertainty
+                % 	5.5	Calculate cross-covariance
+                S_t = zeros(length(Z_t));
+                %Sigma_z = diag([.05,.05,.05]);
+                Sigma_z = diag([.0131^2,.0231^2,.0231^2]);
+                Sigma_mu_z = zeros([nmu,length(Z_t)]);
+                for i = 1:2*nmu+1
+                    S_t = S_t + wc(i)*(z_prop(:,i)-z_bar)*(z_prop(:,i)-z_bar)';
+                    Sigma_mu_z = Sigma_mu_z + wc(i)*(sigma_points_pred(:,i)-mu_bar)*(z_prop(:,i)-z_bar)';
+                end
+                S_t = S_t + Sigma_z; %only add Sigma_z once
+
+                % 	5.6	Calculate Kalman Gain
+                K_t = Sigma_mu_z/S_t; % 9 by 3
+
+                % 	5.7	Calculate state estimate & covariance
+                mu_corr = mu_bar + K_t*(Z_t - z_bar);
+                Sigma_corr = Sigma_pred - K_t*S_t*K_t';
+                sigma_points_corr = get_sigma_points(mu_corr,Sigma_corr);
+
+                % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
+                % as a way of fixing the positive definite covariance matrix
+                % problem
+                %Sigma_corr = .5*Sigma_corr+.5*Sigma_corr' + .00001*eye(nmu);
+
+                STATE_ESTIMATES(:,t) = mu_corr;
+                SIGMA_POINTS(:,:,t) = sigma_points_corr;
+                SIGMA(:,:,t) = Sigma_corr;
+
+
+            else % no tag detected in current frame
+                STATE_ESTIMATES(:,t) = mu_bar;
+                SIGMA_POINTS(:,:,t) = sigma_points_pred;
+                SIGMA(:,:,t) = Sigma_pred;
+            end
+        end
+
+        if method == 1  %correct for velocity
+            if tagDetected(index_april)
+                if rem(index_april,corrfreq) == 0 %run a correction step
+                    if lastdetection == 0 %if a tag hasnt been detected yet, simply record the time and coordinates for safe keeping (b/c velocity can not be calculated)
+                        lastdetection = time(t); %save last tag detected time
+                        lastcoordinates = [x_tag(index_april), y_tag(index_april), z_tag(index_april)]'; %save last coordinates seen
+                        STATE_ESTIMATES(:,t) = mu_bar;
+                        SIGMA_POINTS(:,:,t) = sigma_points_pred;
+                        SIGMA(:,:,t) = Sigma_pred;
+                    else
+                        %apriltag_detections = apriltag_detections+1;
+                        tag_velocity = ([x_tag(index_april), y_tag(index_april), z_tag(index_april), ]' - lastcoordinates)*(time(t) - lastdetection); %this is the tags velocity in the cmera frame
+                        Z_t = [x_tag(index_april), y_tag(index_april), z_tag(index_april),tag_velocity']';
+                        z_prop = zeros(length(Z_t),2*nmu+1);
+                        % 	5.1	Calculate predicted measurement points
+                        % 	5.2 Calculate mean predicted measurement
+                        z_bar = zeros(length(Z_t),1);
+                        for i = 1:2*nmu+1
+                            z_prop(:,i) = calc_meas_prediction2(sigma_points_pred(:,i));
+                            z_bar = z_bar + wm(i)*z_prop(:,i);
+                        end
+                        v_var_prev = .01; % velocity is recallibrated, so get rid of running error
+
+                        % 	5.3	Calculate measurement model uncertainty
+                        % 	5.5	Calculate cross-covariance
+                        S_t = zeros(length(Z_t));
+                        %Sigma_z = diag([.05,.05,.05,.1,.1,.1]);
+                        Sigma_z = diag([.0131^2,.0231^2,.0231^2,sqrt(2)*.0231^2,sqrt(2)*.0231^2,sqrt(2)*.0231^2]);
+                        Sigma_mu_z = zeros([nmu,length(Z_t)]);
+                        for i = 1:2*nmu+1
+                            S_t = S_t + wc(i)*(z_prop(:,i)-z_bar)*(z_prop(:,i)-z_bar)';
+                            Sigma_mu_z = Sigma_mu_z + wc(i)*(sigma_points_pred(:,i)-mu_bar)*(z_prop(:,i)-z_bar)';
+                        end
+                        S_t = S_t + Sigma_z; %only add Sigma_z once
+
+                        % 	5.6	Calculate Kalman Gain
+                        K_t = Sigma_mu_z/S_t; % 9 by 3
+
+                        % 	5.7	Calculate state estimate & covariance
+                        mu_corr = mu_bar + K_t*(Z_t - z_bar);
+                        Sigma_corr = Sigma_pred - K_t*S_t*K_t';
+                        sigma_points_corr = get_sigma_points(mu_corr,Sigma_corr);
+
+                        % this was found at https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
+                        % as a way of fixing the positive definite covariance matrix
+                        % problem
+                        %Sigma_corr = .5*Sigma_corr+.5*Sigma_corr' + .00001*eye(nmu);
+
+                        lastdetection = time(t); %save last tag detected time
+                        lastcoordinates = [x_tag(index_april), y_tag(index_april), z_tag(index_april)]'; %save last coordinates seen
+
+                        STATE_ESTIMATES(:,t) = mu_corr;
+                        SIGMA_POINTS(:,:,t) = sigma_points_corr;
+                        SIGMA(:,:,t) = Sigma_corr;
+                    end
+                else
+                    STATE_ESTIMATES(:,t) = mu_bar;
+                    SIGMA_POINTS(:,:,t) = sigma_points_pred;
+                    SIGMA(:,:,t) = Sigma_pred;
+                end
+        
+            end
+            
+        end
+        index_april = index_april+1;
+    else % not on timestep of video frame
             STATE_ESTIMATES(:,t) = mu_bar;
             SIGMA_POINTS(:,:,t) = sigma_points_pred;
             SIGMA(:,:,t) = Sigma_pred;
-        end
-
-        index_april = index_april+1;
-
-    else % not on timestep of video frame
-        STATE_ESTIMATES(:,t) = mu_bar;
-        SIGMA_POINTS(:,:,t) = sigma_points_pred;
-        SIGMA(:,:,t) = Sigma_pred;
     end
 
 %% Update Variables
@@ -308,7 +379,6 @@ function [sigma_points] = get_sigma_points(mu,Sigma)
 % This function generates 2n+1 sigma points give the mean state and
 % covariance of the state
 global lambda nmu
-%Sigma(Sigma < 0) = 0;
 Sigma = validateCovMatrix(Sigma);
 sigma_points = [mu,mu + chol((nmu+lambda)*Sigma),mu - chol((nmu+lambda)*Sigma)];
 
@@ -339,12 +409,22 @@ end
 
 %% Measurement Model
 
-function [z_prop] = calc_meas_prediction(state_pred,Z_t)
+function [z_prop] = calc_meas_prediction(state_pred)
 % this function calculates a predicted measurement from the predicted state
     global tag_coords
     DCM_CAM = angle2dcm(0,.19,0);
     DCM = angle2dcm(state_pred(9), state_pred(8), state_pred(7));
     z_prop = DCM_CAM'*(DCM*(tag_coords-state_pred(1:3)));
+end
+
+function [z_prop] = calc_meas_prediction2(state_pred)
+% this function calculates a predicted measurement from the predicted state
+    global tag_coords
+    DCM_CAM = angle2dcm(0,.19,0);
+    DCM = angle2dcm(state_pred(9), state_pred(8), state_pred(7));
+    z_pos_prop = DCM_CAM'*(DCM*(tag_coords-state_pred(1:3)));
+    z_vel_prop = DCM_CAM'*(DCM*(-state_pred(4:6))); %predicted measurement of tag velocity
+    z_prop = [z_pos_prop;z_vel_prop];
 end
 
 % from https://stats.stackexchange.com/questions/6364/making-square-root-of-covariance-matrix-positive-definite-matlab/6367#6367
@@ -385,91 +465,3 @@ if (err ~= 0)
 end
 end
 
-%% Confidence Elipse
-function [r_ellipse] = cov_ellipse(state,covariance)
-%this function outputs the x,y vectors of the covariance ellipse for a
-%given state estimate and covariance (2 DIMENSIONS)
-
-% An eigenvector is a vector that does not change through a linear
-% transformation.  In an ellipse (tilted), the major and minor axis do not
-% change through a linear transformation. Therefor, the major and minor
-% axis correspond to the eigenvectors of the covariance matrix.
-% Furthermore, the corresponding eigenvalue explains the length of the
-% eigenvector. For an ellipse, this is the length of the major and minor
-% axis.
-
-% procedure:
-%     1) find the eigenvalue and eigenvectors for the covariance matrix.
-%     These are the directions and lengths of the major and minor axis of
-%     the covariance ellipse 
-%     2) find the angle that the covariance ellipse is tilted. This is the
-%     angle between the x-axis and major axis of ellipse
-%     3) Scale the length of the major and minor axis to match the desired
-%     confidence ellipse using chi-squared parameter for a given confidence
-%     4) create an ellipse with propper major and minor axis
-%     5) Tilt the ellipse by theta calculated above and shift the centroid
-%     up to the the mean state estimate
-
-% Calculate the eigenvectors and eigenvalues of the covariance matrix.
-[eigenvec, eigenval ] = eig(covariance);
-
-% Reorder the eigenvalues in ascending order. Because the order of the eig output is not always in ascending
-%     order (although it ussually is), it is recommended in matlab help
-%     center for "eig" to mannually find the eigenvalues and eigenvectors
-%     you need.
-[eigval,ind] = sort(diag(eigenval)); %extracts the eigenvalues from matrix and sorts them in ascending order
-
-% now using these indices of this sort, we can reorder the corresponding
-% eigenvectors
-eigvec = eigenvec(:,ind);
-
-%define the major and minor axis of the ellipse
-major_axis = eigvec(:,2);
-major_scale = eigval(2);
-
-minor_axis = eigvec(:,1);
-minor_scale = eigval(1);
-
-% calculate the angle between the x axis and the major axis of the ellipse
-angle = atan2(major_axis(2),major_axis(1));
-
-% Shift the angle from 0 to 2pi for plotting purposes
-if(angle < 0)
-     angle = angle + 2*pi;
-end
-
-% now stretch the confidence ellipse to match the desired confidence
-% Get the 95% confidence interval error ellipse
-
-% chi square values for DOF = 2:
-%       Confidence              chi squared value
-%           90                          4.605
-%           95                          5.991
-%           99                          9.210
-
-
-chisquare_val = 9.210;
-theta_grid = linspace(0,2*pi); % set up points to plot
-
-% major axis and minor axis are scaled by the chi-squared value. They are
-% then square rooted to correspond to a scaled standard deviation value
-% rather than a variance value
-a1=sqrt(chisquare_val*major_scale); % major axis / 2
-b1=sqrt(chisquare_val*minor_scale); % minor axis / 2
-
-% the ellipse in x and y coordinates 
-ellipse_x_r  = a1*cos( theta_grid );
-ellipse_y_r  = b1*sin( theta_grid );
-
-%rotation matrix constructed to rotate the ellipse by the angle calculated
-R = [ cos(angle) sin(angle); -sin(angle) cos(angle) ];
-
-% the mean state estimate, used to shift the covariance ellipse to the
-% propper place
-X0=state(1);
-Y0=state(2);
-
-%rotate the ellipse and offset it to be centered at the state estimate
-r_ellipse = [ellipse_x_r;ellipse_y_r]' * R + [X0;Y0]';
-
-end

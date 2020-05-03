@@ -103,11 +103,19 @@ filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-
 % used to callibrate x position tag measurement
 filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_04_29_13_36_24_april.csv';
 
+%% Experiment 16:
+%used to generate allenvariance plot for accelerometer
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/AprilTag/apriltag-master/python/logs/Tello_Log_2020_05_02_18_04_52.csv';
+
+
 %% Linear TEST
 
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
 filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
 
+%% Rectangular TEST
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_april.csv';
 %% Import data from text file.
 
 delimiter = ',';
@@ -877,7 +885,7 @@ for i = 1:length(x_tag)
     pos_corrected = DCM_CAM*[x_tag(i),y_tag(i),z_tag(i)]';
     %pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]'*(.1479+.01)/.1479); % this
     %correction makes data fit better
-    pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]'*0.6096/.5877);
+    pos_corrected = DCM_CAM*([x_tag(i),y_tag(i),z_tag(i)]');
     x_corrected=[x_corrected,pos_corrected(1)];
     y_corrected=[y_corrected,pos_corrected(2)];
     z_corrected=[z_corrected,pos_corrected(3)];
@@ -946,7 +954,47 @@ legend('Camera Measurement with Standard Deviation Bars','True Position')
 mean_xbias = xmean - x_true
 
 
+%% Allen Variance plot for accelerometer callibration
 
+a_l = [a_x,a_y,a_z-9.81]';
+Fs = 0.0117;
+figure(1)
+title('Accelerations')
+plot(time,a_l(1,:))
+hold on
+plot(time,a_l(2,:))
+hold on
+plot(time,a_l(3,:))
+xlabel('Time (s)')
+ylabel('acceleration')
+legend('x acceleration','y acceleration','z acceleration')
 
+theta = a_l(1,40:end)
+Fs = 0.0117;
+t0 = 1/Fs;
 
+maxNumM = 100;
+L = size(theta, 1);
+maxM = 2.^floor(log2(L/2));
+m = logspace(log10(1), log10(maxM), maxNumM).';
+m = ceil(m); % m must be an integer.
+m = unique(m); % Remove duplicates.
 
+tau = m*t0;
+
+avar = zeros(numel(m), 1);
+for i = 1:numel(m)
+    mi = m(i);
+    avar(i,:) = sum( ...
+        (theta(1+2*mi:L) - 2*theta(1+mi:L-mi) + theta(1:L-2*mi)).^2, 1);
+end
+avar = avar ./ (2*tau.^2 .* (L - 2*m));
+adev = sqrt(avar);
+
+figure
+loglog(tau, adev)
+title('Allan Deviation')
+xlabel('\tau');
+ylabel('\sigma(\tau)')
+grid on
+axis equal
