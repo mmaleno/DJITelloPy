@@ -199,6 +199,8 @@ class FrontEnd(object):
             #self.tello.go_xyz_speed(0, 500, 0, 80)
 
             # Large-scale complex trial 1
+            #self.tello.go_xyz_speed(0, -250, 0, 80)
+            #self.tello.go_xyz_speed(250, 0, 0, 80)
             #self.tello.go_xyz_speed(500, -500, 0, 80)
             #self.tello.go_xyz_speed(500, -500, 0, 80)
             #self.tello.go_xyz_speed(-500, 0, 0, 80)
@@ -207,19 +209,21 @@ class FrontEnd(object):
             #self.tello.go_xyz_speed(500, 500, 0, 80)
             #self.tello.go_xyz_speed(-500, 0, 0, 80)
             #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(0, 250, 0, 80)
+            #self.tello.go_xyz_speed(-250, 0, 0, 80)
 
             # Large-scale complex trial 2
-            #self.tello.go_xyz_speed(0, -500, 0, 80)
-            #self.tello.rotate_clockwise(15)
-            #self.tello.go_xyz_speed(500, 0, 0, 80)
-            #self.tello.rotate_counter_clockwise(30)
-            #self.tello.go_xyz_speed(500, 0, 0, 80)
-            #self.tello.rotate_clockwise(30)
-            #self.tello.go_xyz_speed(-500, 0, 0, 80)
-            #self.tello.rotate_counter_clockwise(30)
-            #self.tello.go_xyz_speed(-500, 0, 0, 80)
-            #self.tello.rotate_counter_clockwise(15)
-            #self.tello.go_xyz_speed(0, 500, 0, 80)
+            self.tello.go_xyz_speed(0, -500, 0, 80)
+            self.tello.rotate_clockwise(15)
+            self.tello.go_xyz_speed(500, 0, 0, 80)
+            self.tello.rotate_counter_clockwise(30)
+            self.tello.go_xyz_speed(500, 0, 0, 80)
+            self.tello.rotate_clockwise(30)
+            self.tello.go_xyz_speed(-500, 0, 0, 80)
+            self.tello.rotate_counter_clockwise(30)
+            self.tello.go_xyz_speed(-500, 0, 0, 80)
+            self.tello.rotate_clockwise(15)
+            self.tello.go_xyz_speed(0, 500, 0, 80)
             
             self.tello.land()            
             self.send_custom_command = False
