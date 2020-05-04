@@ -60,7 +60,7 @@ end
 %           99                          9.210
 
 
-chisquare_val = 1.605;
+chisquare_val = 4.605;
 theta_grid = linspace(0,2*pi); % set up points to plot
 
 % major axis and minor axis are scaled by the chi-squared value. They are

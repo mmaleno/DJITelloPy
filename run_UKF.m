@@ -44,16 +44,29 @@ wc = [lambda/(nmu+lambda)+(1-a^2+b);1/(2*(nmu+lambda))*ones(2*nmu,1)];
 % Coordinates of tag(s) in global frame
 % Tag order: Tag36h11
 %tag_coords = [2.74,0.2286,-0.6731]';%for linear test
-tag_coords = [2.74,34*.0254,-0.6731]';%for rectangular test
-
+%tag_coords = [2.74,34*.0254,-0.6731]';%for rectangular test
+%tag_coords = [15,0,-31*.0254]';%for linaer large test
+tag_coords = [15,5,-31*.0254]';%for rect and complex large test
 % Load Data
 
 % Kev comp
 % filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_imu.csv';
 % filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_april.csv';
 
-filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_imu.csv';
-filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_april.csv';
+% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_imu.csv';
+% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_april.csv';
+
+% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex_imu.csv';
+% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex_april.csv';
+% 
+% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_large_imu.csv';
+% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_large_april.csv';
+
+% filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex2_large_imu.csv';
+% filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex2_large_april.csv';
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex1_large_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex1_large_april.csv';
 
 
 % Max comp
@@ -109,6 +122,8 @@ tagDetected = dataArray{:, 3};
 y_tag = dataArray{:, 4}; % in camera coordinate system
 z_tag = dataArray{:, 5};
 x_tag = dataArray{:, 6};
+
+
 %if tag callibration desired
 % y_tag = dataArray{:, 4}*0.6096/.5877; % in our local coordinate system
 % z_tag = dataArray{:, 5}*0.6096/.5877;
@@ -138,8 +153,38 @@ timeCamA = timeCam+(time(1)-timeCam(1));
 % a_y = a_y - ay_bias;
 % a_z = a_z - az_bias;
 
-% for rectangular test
-takeoff = 3;
+
+% for Linear_large test
+
+% % callibration procedure will occur when the vehicle is on a flat surface
+% [start_data,time_calstart] = find(time>13);
+% [takeoff,time_calend] = find(time>16);
+
+% for complex1_large
+[start_data,time_calstart] = find(time>12);
+[takeoff,time_calend] = find(time>13);
+
+% for complex2_large
+% [start_data,time_calstart] = find(time>31);
+% [takeoff,time_calend] = find(time>32.4);
+
+% [indices_real_data,accels] = find(a_z ~= -1); % finds indices and values for hieghts not equal to zero
+% [takeoff_point,accels] = find(a_z > 10.5); % finds indices and values for hieghts not equal to zero
+% start_data= indices_real_data(1);
+% takeoff = takeoff_point(1); % index for when the drone takes off. Callibration procedures will end
+
+% calculate offsets during callibration procedure
+ax_bias = mean(a_x(start_data(1):takeoff(1)));
+ay_bias = mean(a_y(start_data(1):takeoff(1)));
+az_bias = mean(a_z(start_data(1):takeoff(1)))-9.81; %assuming z is alligned with gravity
+
+% delete these offsets from data
+a_x = a_x - ax_bias;
+a_y = a_y - ay_bias;
+a_z = a_z - az_bias;
+
+% for rectangular and complex test
+%takeoff = 3;
 
 
 %% Initialize the filter
@@ -220,9 +265,9 @@ for t = (takeoff-1):length(time)
     % a little more semi-empirical way:
     theta_offset = .5*pi/180;
     projection_error = 9.81*[sin(theta_offset),sin(theta_offset),1-cos(theta_offset)]';
-    v_var_prev = v_var_prev + projection_error*dt;
+    v_var_prev = v_var_prev + (projection_error).^2*dt;
     %v_var_prev = v_var_prev + (sigma_hover).^2*dt+.01;
-    R_t = diag([0.01^2,0.01^2,0.01^2,v_var_prev',(.7*pi/180)^2,(.7*pi/180)^2,(.7*pi/180)^2]); %TODO: figure out how to make this end up being a positive definite
+    R_t = diag([0.005^2,0.005^2,0.005^2,v_var_prev',(.7*pi/180)^2,(.7*pi/180)^2,(.7*pi/180)^2]); %TODO: figure out how to make this end up being a positive definite
     %R_t = zeros(nmu);
         
     for i = 1:2*nmu+1
@@ -245,7 +290,7 @@ for t = (takeoff-1):length(time)
  
     %% Correction Step
     
-    if time(t) > timeCamA(index_april)
+    if time(t) > timeCamA(index_april) && index_april+1 <= length(timeCamA)
         if method == 0 %normal method, not correcting for velocity
             if tagDetected(index_april)
                 apriltag_detections = apriltag_detections+1;
@@ -255,7 +300,7 @@ for t = (takeoff-1):length(time)
                 % 	5.2 Calculate mean predicted measurement
                 z_bar = zeros(length(Z_t),1);
                 for i = 1:2*nmu+1
-                    z_prop(:,i) = calc_meas_prediction(sigma_points_pred(:,i),Z_t);
+                    z_prop(:,i) = calc_meas_prediction(sigma_points_pred(:,i));
                     z_bar = z_bar + wm(i)*z_prop(:,i);
                 end
 
@@ -263,7 +308,7 @@ for t = (takeoff-1):length(time)
                 % 	5.5	Calculate cross-covariance
                 S_t = zeros(length(Z_t));
                 %Sigma_z = diag([.05,.05,.05]);
-                Sigma_z = diag([.0131^2,.0231^2,.0231^2]);
+                Sigma_z = diag([.0045^2,.0061^2,.0061^2]);
                 Sigma_mu_z = zeros([nmu,length(Z_t)]);
                 for i = 1:2*nmu+1
                     S_t = S_t + wc(i)*(z_prop(:,i)-z_bar)*(z_prop(:,i)-z_bar)';
@@ -317,7 +362,7 @@ for t = (takeoff-1):length(time)
                             z_prop(:,i) = calc_meas_prediction2(sigma_points_pred(:,i));
                             z_bar = z_bar + wm(i)*z_prop(:,i);
                         end
-                        v_var_prev = .01; % velocity is recallibrated, so get rid of running error
+                        v_var_prev = .01^2; % velocity is recallibrated, so get rid of running error
 
                         % 	5.3	Calculate measurement model uncertainty
                         % 	5.5	Calculate cross-covariance
@@ -356,8 +401,12 @@ for t = (takeoff-1):length(time)
                     SIGMA_POINTS(:,:,t) = sigma_points_pred;
                     SIGMA(:,:,t) = Sigma_pred;
                 end
-        
+            else
+                STATE_ESTIMATES(:,t) = mu_bar;
+                SIGMA_POINTS(:,:,t) = sigma_points_pred;
+                SIGMA(:,:,t) = Sigma_pred;         
             end
+            
             
         end
         index_april = index_april+1;

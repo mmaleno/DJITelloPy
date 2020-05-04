@@ -116,6 +116,27 @@ filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials
 %% Rectangular TEST
 filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_imu.csv';
 filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Rectangle_april.csv';
+
+%% Complex path
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex_april.csv';
+
+%% Large Linear test
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_large_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Linear_large_april.csv';
+
+%% Large complex path
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex2_large_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex2_large_april.csv';
+
+%% Complex 1
+
+filename = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex1_large_imu.csv';
+filename_april = '/Users/kevinshoyer/Desktop/DJITelloPy_E205.nosync/clean_trials/Complex1_large_april.csv';
+
 %% Import data from text file.
 
 delimiter = ',';
@@ -209,14 +230,14 @@ plot(time, pitch)
 %% Plot the accelerations
 
 figure(1)
-title('Accelerations')
+title('Raw Accelerations')
 plot(time,a_x)
 hold on
 plot(time,a_y)
 hold on
 plot(time,a_z)
 xlabel('Time (s)')
-ylabel('acceleration')
+ylabel('Acceleration (m/s^2)')
 legend('x acceleration','y acceleration','z acceleration')
 
 %% Plot velocities
@@ -266,8 +287,6 @@ legend('Roll','Pitch','Yaw')
 %% numerically integrate velocity values to propegate state
 delta_t = time(2:end) - time(1:end-1)
 
-
-
 x_pos = [];
 y_pos = [];
 z_pos = [];
@@ -290,7 +309,6 @@ plot(x_pos,y_pos)
 title('x,y path from velocity integration')
 xlabel('x position (m)')
 ylabel('y Position (m)')
-
 
 %% transform accelerations
 
@@ -358,14 +376,14 @@ a_g(3,:)= a_g(3,:) - az_bias;
 %% Plot the new callibrated accelerations
 
 figure(7)
-title('Callibrated Global accelerations')
-xlabel('Time')
-ylabel('acceleration (mg)')
 plot(time,a_g(1,:))
 hold on
 plot(time,a_g(2,:))
 hold on
 plot(time,a_g(3,:))
+xlabel('Time (s)')
+ylabel('acceleration (m/s^2)')
+title('Callibrated Global accelerations')
 legend('x acceleration', 'y acceleration', 'z acceleration')
 
 %% if desired, smooth the data using MATLABs built in moving average filter
@@ -462,8 +480,21 @@ hold on
 plot(time(11:end),v_ya)
 hold on
 plot(time(11:end),v_za)
+xlabel('Time (s)')
+ylabel('Velocity (m/s)')
 legend('x velocity','y velocity','z velocity')
-title('Velocities integrated from global accelerations')
+title('Velocities integrated from Global Accelerations')
+
+figure(8)
+plot(time(11:end),x_pos_a)
+hold on
+plot(time(11:end),y_pos_a)
+hold on
+plot(time(11:end),z_pos_a)
+xlabel('Time (s)')
+ylabel('Position (m)')
+legend('x position','y position','z position')
+title('Position integrated from global accelerations')
 
 %% Motion model only using the roll pitch and yaw
 % this model uses the assumption that the quadcopter motors have the thrust
@@ -818,6 +849,9 @@ xlabel('time (s)')
 ylabel('Standard Deviation (m)')
 legend('x','y','z')
 
+%% Example of velocity integration over time
+
+
 
 %% I dont think the above is what we want since the position is corrected in the correction step.  It should be the velocity error multiplied by dt.
 
@@ -899,16 +933,19 @@ z_corrected(z_corrected<-20) = NaN;
 
 %plot new corrected data (make sure z stays constant
 figure(27)
-plot(x_corrected,'o')
+plot(x_corrected)
 hold on
-plot(y_corrected,'o')
+plot(y_corrected)
 hold on
-plot(z_corrected,'o')
+plot(z_corrected)
 hold on
 %plot(timeCamA,sqrt(x_tag.^2+y_tag.^2+z_tag.^2),'o')
 %hold on 
 % plot(time,yaw)
-legend('x','y','z','distance')
+title('Tag Measurement Validation Data')
+ylabel('Tag Position (m)')
+xlabel('Image Frame')
+legend('x','y','z')
 
 % find mean values
 x2 = mean(x_corrected(ti2:tf2),'omitnan');
