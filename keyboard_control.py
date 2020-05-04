@@ -151,10 +151,14 @@ class FrontEnd(object):
             self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity, self.up_down_velocity,
                                        self.yaw_velocity)
         if self.send_custom_command:
+            self.send_rc_control = False
+            self.tello.takeoff()
+            
+            # Small-scale linear trial
             #self.tello.move_forward(200)
             #self.tello.move_back(200)
-            self.tello.takeoff()
-            self.send_rc_control = True
+
+            # Small-scale rectangle trial
             #self.tello.go_xyz_speed(100, 0, 0, 20)
             #time.sleep(7)
             #self.tello.go_xyz_speed(0, -150, 0, 20)
@@ -163,20 +167,66 @@ class FrontEnd(object):
             #time.sleep(7)
             #self.tello.go_xyz_speed(0, 150, 0, 20)
             #time.sleep(10)
-            #self.tello.land()
-            self.tello.go_xyz_speed(50, 0, 0, 20)
-            time.sleep(4)
-            self.tello.go_xyz_speed(0, -50, 0, 20)
-            time.sleep(4)
-            self.tello.go_xyz_speed(75, 0, 0, 20)
-            time.sleep(5)
-            self.tello.go_xyz_speed(0, 25, 0, 20)
-            time.sleep(3)
-            self.tello.go_xyz_speed(-125, 25, 0, 20)
-            time.sleep(10)
-            self.send_rc_control = False
+
+            # Small-scale complex trial
+            #self.tello.go_xyz_speed(50, 0, 0, 20)
+            #time.sleep(4)
+            #self.tello.go_xyz_speed(0, -50, 0, 20)
+            #time.sleep(4)
+            #self.tello.go_xyz_speed(75, 0, 0, 20)
+            #time.sleep(5)
+            #self.tello.go_xyz_speed(0, 25, 0, 20)
+            #time.sleep(3)
+            #self.tello.go_xyz_speed(-125, 25, 0, 20)
+            #time.sleep(10)
+
+            # Large-scale linear trial
+            #self.tello.go_xyz_speed(500, 0, 0, 80)
+            #self.tello.go_xyz_speed(500, 0, 0, 80)
+            #self.tello.go_xyz_speed(200, 0, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(-200, 0, 0, 80)
+            
+            # Large-scale rectangle trial
+            #self.tello.go_xyz_speed(500, 0, 0, 80)
+            #self.tello.go_xyz_speed(500, 0, 0, 80)
+            #self.tello.go_xyz_speed(0, -500, 0, 80)
+            #self.tello.go_xyz_speed(0, -500, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(0, 500, 0, 80)
+            #self.tello.go_xyz_speed(0, 500, 0, 80)
+
+            # Large-scale complex trial 1
+            #self.tello.go_xyz_speed(0, -250, 0, 80)
+            #self.tello.go_xyz_speed(250, 0, 0, 80)
+            #self.tello.go_xyz_speed(500, -500, 0, 80)
+            #self.tello.go_xyz_speed(500, -500, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(500, 500, 0, 80)
+            #self.tello.go_xyz_speed(500, 500, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(-500, 0, 0, 80)
+            #self.tello.go_xyz_speed(0, 250, 0, 80)
+            #self.tello.go_xyz_speed(-250, 0, 0, 80)
+
+            # Large-scale complex trial 2
+            self.tello.go_xyz_speed(0, -500, 0, 80)
+            self.tello.rotate_clockwise(15)
+            self.tello.go_xyz_speed(500, 0, 0, 80)
+            self.tello.rotate_counter_clockwise(30)
+            self.tello.go_xyz_speed(500, 0, 0, 80)
+            self.tello.rotate_clockwise(30)
+            self.tello.go_xyz_speed(-500, 0, 0, 80)
+            self.tello.rotate_counter_clockwise(30)
+            self.tello.go_xyz_speed(-500, 0, 0, 80)
+            self.tello.rotate_clockwise(15)
+            self.tello.go_xyz_speed(0, 500, 0, 80)
+            
+            self.tello.land()            
             self.send_custom_command = False
-            #self.send_rc_control = True
 
 
 def main():
